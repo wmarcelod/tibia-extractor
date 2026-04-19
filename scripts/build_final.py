@@ -147,6 +147,35 @@ def main() -> int:
             grade INTEGER
         )
     """)
+    c.execute("""
+        CREATE TABLE areas (
+            area_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            area_type TEXT,
+            parent_area_id INTEGER,
+            label_x INTEGER, label_y INTEGER, label_z INTEGER,
+            alias TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE npc_locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            npc_name TEXT NOT NULL,
+            x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL,
+            subarea_id INTEGER,
+            area_name TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE map_files (
+            file_name TEXT PRIMARY KEY,
+            file_type TEXT,
+            top_left_x INTEGER, top_left_y INTEGER, top_left_z INTEGER,
+            fields_width INTEGER, fields_height INTEGER,
+            area_id INTEGER,
+            scale_factor REAL
+        )
+    """)
 
     for it in items:
         c.execute(
@@ -219,6 +248,43 @@ def main() -> int:
             )
         print(f"[+] Achievements na DB: {len(achs)}")
 
+    areas_json = OUT / "areas.json"
+    if areas_json.exists():
+        areas = json.loads(areas_json.read_text(encoding="utf-8"))
+        for a in areas:
+            c.execute(
+                "INSERT OR REPLACE INTO areas VALUES (?,?,?,?,?,?,?,?)",
+                (a.get("area_id"), a.get("name"), a.get("area_type"),
+                 a.get("parent_area_id"),
+                 a.get("label_x"), a.get("label_y"), a.get("label_z"),
+                 json.dumps(a.get("alias") or [])),
+            )
+        print(f"[+] Areas na DB: {len(areas)}")
+
+    npcs_loc_json = OUT / "npcs_locations.json"
+    if npcs_loc_json.exists():
+        npls = json.loads(npcs_loc_json.read_text(encoding="utf-8"))
+        for n in npls:
+            c.execute(
+                "INSERT INTO npc_locations (npc_name, x, y, z, subarea_id, area_name) VALUES (?,?,?,?,?,?)",
+                (n.get("name"), n.get("x"), n.get("y"), n.get("z"),
+                 n.get("subarea_id"), n.get("area_name")),
+            )
+        print(f"[+] NPC locations na DB: {len(npls)}")
+
+    mfiles_json = OUT / "map_files.json"
+    if mfiles_json.exists():
+        mfs = json.loads(mfiles_json.read_text(encoding="utf-8"))
+        for m in mfs:
+            c.execute(
+                "INSERT OR REPLACE INTO map_files VALUES (?,?,?,?,?,?,?,?,?)",
+                (m.get("file_name"), m.get("file_type"),
+                 m.get("top_left_x"), m.get("top_left_y"), m.get("top_left_z"),
+                 m.get("fields_width"), m.get("fields_height"),
+                 m.get("area_id"), m.get("scale_factor")),
+            )
+        print(f"[+] Map files na DB: {len(mfs)}")
+
     c.execute("CREATE INDEX idx_items_name ON items(name)")
     c.execute("CREATE INDEX idx_items_cat ON items(market_category)")
     c.execute("CREATE INDEX idx_npc_item ON npc_sales(item_id)")
@@ -226,6 +292,12 @@ def main() -> int:
     c.execute("CREATE INDEX idx_sprites_item ON item_sprites(item_id)")
     c.execute("CREATE INDEX idx_monsters_name ON monsters(name)")
     c.execute("CREATE INDEX idx_monsters_outfit ON monsters(outfit_id)")
+    c.execute("CREATE INDEX idx_areas_name ON areas(name)")
+    c.execute("CREATE INDEX idx_npc_loc_name ON npc_locations(npc_name COLLATE NOCASE)")
+    c.execute("CREATE INDEX idx_npc_loc_area ON npc_locations(area_name)")
+    c.execute("CREATE INDEX idx_map_files_area ON map_files(area_id)")
+    c.execute("CREATE INDEX idx_map_files_type ON map_files(file_type)")
+    c.execute("CREATE INDEX idx_map_files_xyz ON map_files(top_left_x, top_left_y, top_left_z)")
     conn.commit()
 
     # Estatisticas rapidas

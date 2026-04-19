@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Mapa - Tibia DB{% endblock %}
+
+{% block main %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<main class="single">
+  <section class="content">
+    <h2>Mapa <small>(1211 NPCs, {{ areas|length }} areas)</small></h2>
+
+    <div class="map-toolbar">
+      <label>Piso:
+        <select id="floor-select">
+          {% for z in range(8) %}
+            <option value="{{ z }}" {% if z == 7 %}selected{% endif %}>z={{ z }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Camada:
+        <select id="layer-select">
+          <option value="satellite_32" selected>Satélite (medio)</option>
+          <option value="satellite_16">Satélite (zoom out)</option>
+          <option value="satellite_64">Satélite (zoom in)</option>
+          <option value="minimap">Minimapa</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="show-npcs" checked> Mostrar NPCs</label>
+      <span id="npc-count" class="tag">0 NPCs</span>
+    </div>
+
+    <div id="map" style="width:100%; height:700px; background:#111; border:1px solid var(--border-soft); border-radius:4px;"></div>
+
+    <p style="margin-top:10px; color: var(--fg-muted); font-size: 12px;">
+      Dados extraidos direto de <code>assets/assets/map-*.dat</code> + tiles de
+      <code>satellite-*.bmp.lzma</code>/<code>minimap-*.bmp.lzma</code> do cliente.
+    </p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  // Tibia world coords: x≈31872..33920, y≈30976..32900
+  // Leaflet CRS.Simple: mapeamos (world_x, world_y) -> (lng=x, lat=-y) pra y "virar pra baixo"
+  const WORLD_MIN_X = 31744, WORLD_MAX_X = 34303;
+  const WORLD_MIN_Y = 30976, WORLD_MAX_Y = 33023;
+
+  // tamanho do tile (wold tiles por tile file)
+  // satellite_32 cada tile cobre 512 sqm (scale_factor=0.03125 -> 1/32)
+  // Conforme agent B: step no nome = 16 entre tiles adjacentes; numero no nome = world/32
+  // Tile filename ex: 0996-0968-00.png  (0996*32 = 31872, world-x; 0968*32 = 30976, world-y; floor 00)
+  // scale_factor 0.03125 => tile .png 512x512 cobre 16 world tiles (1 px = 1/32 sqm) — na verdade 512 world sqm
+
+  const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -4, maxZoom: 3, zoom: 0,
+    attributionControl: false,
+  });
+
+  // tiles dinamicos: busca do server a lista e desenha cada um como ImageOverlay
+  let currentLayers = [];
+  let npcMarkers = [];
+  let currentZ = 7;
+  let currentKind = 'satellite_32';
+
+  function latLng(x, y) { return [-y, x]; }
+
+  async function loadTiles() {
+    currentLayers.forEach(l => map.removeLayer(l));
+    currentLayers = [];
+    const resp = await fetch(`/api/map/tiles/${currentZ}?kind=${currentKind}`);
+    const data = await resp.json();
+    const scaleMap = {satellite_16: 8, satellite_32: 16, satellite_64: 32, minimap: 16};
+    const step = scaleMap[currentKind] || 16;
+    for (const t of data.tiles) {
+      const url = `/map_tile/${currentKind}/${t.name}`;
+      // tile cobre (t.x, t.y) até (t.x + t.w, t.y + t.h) em world coords
+      const bounds = [latLng(t.x, t.y), latLng(t.x + t.w, t.y + t.h)];
+      const img = L.imageOverlay(url, bounds);
+      img.addTo(map);
+      currentLayers.push(img);
+    }
+    if (data.tiles.length === 0) {
+      console.warn('Sem tiles pro piso', currentZ, 'camada', currentKind);
+    }
+  }
+
+  async function loadNPCs() {
+    npcMarkers.forEach(m => map.removeLayer(m));
+    npcMarkers = [];
+    if (!document.getElementById('show-npcs').checked) {
+      document.getElementById('npc-count').textContent = '0 NPCs';
+      return;
+    }
+    const resp = await fetch(`/api/map/npcs?z=${currentZ}`);
+    const npcs = await resp.json();
+    for (const n of npcs) {
+      const m = L.circleMarker(latLng(n.x, n.y), {
+        radius: 4, color: '#de360f', weight: 1, fillColor: '#fff', fillOpacity: 0.9,
+      });
+      m.bindTooltip(`<b>${n.npc_name}</b><br>${n.area_name || '?'} (${n.x},${n.y},${n.z})`, {sticky: true});
+      m.on('click', () => { window.location.href = '/npcs/' + encodeURIComponent(n.npc_name); });
+      m.addTo(map);
+      npcMarkers.push(m);
+    }
+    document.getElementById('npc-count').textContent = npcs.length + ' NPCs';
+  }
+
+  // set initial view centered
+  map.fitBounds([
+    latLng(WORLD_MIN_X, WORLD_MIN_Y),
+    latLng(WORLD_MAX_X, WORLD_MAX_Y),
+  ]);
+
+  document.getElementById('floor-select').addEventListener('change', e => {
+    currentZ = parseInt(e.target.value);
+    loadTiles(); loadNPCs();
+  });
+  document.getElementById('layer-select').addEventListener('change', e => {
+    currentKind = e.target.value;
+    loadTiles();
+  });
+  document.getElementById('show-npcs').addEventListener('change', loadNPCs);
+
+  loadTiles(); loadNPCs();
+})();
+</script>
+
+<style>
+.map-toolbar { display: flex; gap: 16px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.map-toolbar label { font-size: 13px; }
+.map-toolbar select { padding: 3px 6px; }
+.leaflet-container { font-family: inherit; }
+</style>
+{% endblock %}

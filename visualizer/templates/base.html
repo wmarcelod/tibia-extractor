@@ -19,6 +19,7 @@
     <a href="{{ url_for('npcs') }}"     class="{% if active == 'npcs' %}active{% endif %}">NPCs</a>
     <a href="{{ url_for('monsters_list') }}" class="{% if active == 'monsters' %}active{% endif %}">Criaturas</a>
     <a href="{{ url_for('outfits') }}"  class="{% if active == 'outfits' %}active{% endif %}">Outfits</a>
+    <a href="{{ url_for('map_view') }}" class="{% if active == 'map' %}active{% endif %}">Mapa</a>
   </nav>
 
   {% block main %}{% endblock %}

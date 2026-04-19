@@ -29,6 +29,7 @@ DB_PATH = ROOT / "out" / "items.db"
 OUTFITS_JSON = ROOT / "out" / "outfits.json"
 SPRITES_DIR = ROOT / "out" / "sprites"
 GIFS_DIR = ROOT / "out" / "gifs"
+MAP_TILES_DIR = ROOT / "out" / "map_tiles"
 
 _OUTFITS_CACHE: list | None = None
 
@@ -78,6 +79,16 @@ def outfit_gif(outfit_id: int, direction: int):
     if not (GIFS_DIR / fname).exists():
         abort(404)
     return send_from_directory(GIFS_DIR, fname, max_age=60 * 60 * 24)
+
+
+@app.route("/map_tile/<kind>/<filename>")
+def map_tile(kind: str, filename: str):
+    if kind not in {"minimap", "satellite_16", "satellite_32", "satellite_64", "subarea"}:
+        abort(404)
+    d = MAP_TILES_DIR / kind
+    if not (d / filename).exists():
+        abort(404)
+    return send_from_directory(d, filename, max_age=60 * 60 * 24 * 7)
 
 
 @app.route("/gif/item/<int:item_id>.gif")
@@ -478,6 +489,88 @@ def monster_detail(name: str):
             if (GIFS_DIR / f"outfit_{m['outfit_id']}_dir{d}.gif").exists():
                 dirs.append(d)
     return render_template("monster.html", m=m, gif_dirs=dirs)
+
+
+# ---------- routes: map ----------
+
+@app.route("/map")
+def map_view():
+    c = db().cursor()
+    # bbox do mundo
+    try:
+        bbox = c.execute(
+            "SELECT MIN(top_left_x), MAX(top_left_x+fields_width), "
+            "MIN(top_left_y), MAX(top_left_y+fields_height), "
+            "MIN(top_left_z), MAX(top_left_z) FROM map_files"
+        ).fetchone()
+        areas = c.execute(
+            "SELECT area_id, name, area_type, label_x, label_y, label_z "
+            "FROM areas WHERE area_type='AREA' ORDER BY name"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        bbox = (32000, 34000, 31000, 33000, 0, 7)
+        areas = []
+    return render_template("map.html", bbox=bbox, areas=areas)
+
+
+@app.route("/api/map/tiles/<int:z>")
+def api_map_tiles(z: int):
+    """Retorna lista de tiles disponiveis pra um piso (z)."""
+    kind = request.args.get("kind", "satellite_32")  # default zoom medio
+    file_type = "SATELLITE" if kind.startswith("satellite") else kind.upper()
+    # scale_factor por kind: sat_16=0.0625, sat_32=0.03125, sat_64=0.015625
+    scale_map = {"satellite_16": 0.0625, "satellite_32": 0.03125, "satellite_64": 0.015625}
+    c = db().cursor()
+    if file_type == "SATELLITE":
+        scale = scale_map.get(kind)
+        rows = c.execute(
+            "SELECT file_name, top_left_x, top_left_y, fields_width, fields_height "
+            "FROM map_files WHERE file_type='SATELLITE' AND top_left_z=? AND scale_factor=?",
+            [z, scale],
+        ).fetchall()
+    else:
+        rows = c.execute(
+            "SELECT file_name, top_left_x, top_left_y, fields_width, fields_height "
+            "FROM map_files WHERE file_type=? AND top_left_z=?",
+            [file_type, z],
+        ).fetchall()
+    # converte nome do arquivo .bmp.lzma -> .png
+    from flask import jsonify
+    tiles = []
+    for r in rows:
+        png = r["file_name"].replace(".bmp.lzma", ".png")
+        # quebra prefix: "minimap-32-XXXX-YYYY-FF-<hash>.bmp.lzma" -> "XXXX-YYYY-FF.png"
+        import re as _re
+        m = _re.match(r"(minimap|satellite)-(\d+)-(\d{4})-(\d{4})-(\d{2})-.*", r["file_name"])
+        if m:
+            png = f"{m.group(3)}-{m.group(4)}-{m.group(5)}.png"
+        m2 = _re.match(r"subarea-(\d+)-.*", r["file_name"])
+        if m2:
+            png = f"{m2.group(1)}.png"
+        tiles.append({
+            "name": png,
+            "x": r["top_left_x"], "y": r["top_left_y"],
+            "w": r["fields_width"], "h": r["fields_height"],
+        })
+    return jsonify({"kind": kind, "z": z, "tiles": tiles})
+
+
+@app.route("/api/map/npcs")
+def api_map_npcs():
+    """NPCs com coord, filtrado por piso opcional."""
+    from flask import jsonify
+    z = request.args.get("z", type=int)
+    c = db().cursor()
+    if z is not None:
+        rows = c.execute(
+            "SELECT npc_name, x, y, z, area_name FROM npc_locations WHERE z=? ORDER BY npc_name",
+            [z],
+        ).fetchall()
+    else:
+        rows = c.execute(
+            "SELECT npc_name, x, y, z, area_name FROM npc_locations ORDER BY npc_name"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
 
 
 # ---------- search ----------

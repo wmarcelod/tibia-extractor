@@ -133,19 +133,27 @@ def main() -> int:
             env=env)
 
         run([sys.executable, "decode_staticdata.py"],
-            "4/6 Decodificando staticdata (monsters + achievements)",
+            "4/8 Decodificando staticdata (monsters + achievements)",
+            env=env)
+
+        run([sys.executable, "decode_map.py"],
+            "5/8 Decodificando map.dat (areas + NPCs + tile refs)",
             env=env)
 
         run([sys.executable, "extract_sprites.py"],
-            "5a/6 Extraindo sprites PNG individuais",
+            "6a/8 Extraindo sprites PNG individuais",
+            env=env)
+
+        run([sys.executable, "extract_map_tiles.py"],
+            "6b/8 Extraindo tiles de mapa (minimap/satellite/subarea)",
             env=env)
 
         run([sys.executable, "gen_gifs.py"],
-            "5b/6 Gerando GIFs animados por direcao",
+            "7/8 Gerando GIFs animados por direcao",
             env=env)
 
         run([sys.executable, "build_final.py"],
-            "6/6 Gerando SQLite + CSV final (items + npcs + monsters + imagens)",
+            "8/8 Gerando SQLite final (items+npcs+monsters+map+imagens)",
             env=env)
 
         VERSION_FILE.write_text(remote, encoding="utf-8")

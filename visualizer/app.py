@@ -121,6 +121,35 @@ def admin_status():
     return Response("\n".join(lines), mimetype="text/plain")
 
 
+@app.route("/admin/upload", methods=["POST"])
+def admin_upload():
+    """Recebe um tar.gz no body e extrai em /app/out (sobrescreve).
+
+    Uso pra bootstrap inicial / atualizacoes quando o host bate 403
+    em static.tibia.com. Cliente:
+      tar czf out.tgz -C out . && curl --data-binary @out.tgz \\
+        "https://<host>/admin/upload?token=XXX"
+    """
+    _require_admin()
+    import io, tarfile
+    data = request.get_data(cache=False)
+    if not data:
+        return Response("body vazio", status=400, mimetype="text/plain")
+    out_dir = ROOT / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tf:
+            members = [m for m in tf.getmembers() if not m.name.startswith("/") and ".." not in m.name.split("/")]
+            tf.extractall(out_dir, members=members, filter="data")
+            n = len(members)
+    except tarfile.TarError as e:
+        return Response(f"tar error: {e}", status=400, mimetype="text/plain")
+    return Response(
+        f"ok: {n} membros extraidos em {out_dir}\nbytes: {len(data)}\n",
+        mimetype="text/plain",
+    )
+
+
 @app.route("/admin/run-pipeline")
 def admin_run_pipeline():
     _require_admin()

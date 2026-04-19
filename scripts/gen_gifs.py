@@ -240,6 +240,41 @@ def gen_gifs_for_outfit(
     return generated, paths
 
 
+def gen_gif_for_item(
+    item_id: int,
+    fgs: list[dict],
+    *,
+    force: bool,
+    source_mtime: float,
+) -> bool:
+    """Gera 1 GIF (sem direcao) pra um item animado. Retorna True se gerou.
+
+    Items usam fixed_frame_group=2 (OBJECT_INITIAL), entao nao usa
+    pick_frame_group (que olha 0/1). Pega o primeiro fg com >=2 phases.
+    """
+    fg = next((f for f in fgs if f["phases"] >= 2), None)
+    if fg is None:
+        return False
+    out_path = GIFS_DIR / f"item_{item_id}.gif"
+    if out_path.exists() and not force:
+        try:
+            if out_path.stat().st_mtime > source_mtime:
+                return False
+        except OSError:
+            pass
+    # items raramente tem pattern_width>1; usamos direction=0 (primeira coluna)
+    # e layer=0 pd_i=0 ph_i=0 — varia apenas phase
+    frames = build_direction_frames(fg, direction=0)
+    if not frames:
+        return False
+    try:
+        rgba_frames_to_gif(frames, out_path)
+        return True
+    except Exception as e:
+        print(f"[WARN] item {item_id}: {e}")
+        return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Gera GIFs animados de outfits")
     parser.add_argument("--force", action="store_true", help="Regerar mesmo se GIF mais novo que outfits.json")
@@ -330,10 +365,55 @@ def main() -> int:
     print("=" * 60)
     print(f"Outfits candidatos (has_moving && >1 sprite): {len(candidates)}")
     print(f"Outfits com GIF gerado:                       {outfits_with_gifs}")
-    print(f"Total de GIFs gerados:                        {total_gifs}")
+    print(f"Total de GIFs gerados (outfits):              {total_gifs}")
     print(f"Skipped (nao encontrado no .dat):             {skipped}")
-    print(f"Tempo total:                                  {elapsed:.1f}s")
-    print(f"Output:                                       {GIFS_DIR}")
+    print(f"Tempo total (outfits):                        {elapsed:.1f}s")
+
+    # ====== ITEMS ANIMADOS ======
+    print()
+    print("[+] Gerando GIFs pra items animados...")
+    t1 = time.time()
+    item_candidates = [o for o in ap.object if any(
+        fg.sprite_info and fg.sprite_info.animation and
+        len(fg.sprite_info.animation.sprite_phase) >= 2
+        for fg in o.frame_group
+    )]
+    if args.limit is not None:
+        item_candidates = item_candidates[: args.limit]
+    print(f"[+] Items candidatos (>=2 phases): {len(item_candidates)}")
+
+    item_gifs = 0
+    for i, obj in enumerate(item_candidates):
+        fgs = []
+        for fg in obj.frame_group:
+            si = fg.sprite_info
+            if not si:
+                continue
+            n_phases = (
+                len(si.animation.sprite_phase)
+                if si.animation and si.animation.sprite_phase
+                else 1
+            )
+            fgs.append({
+                "fixed_frame_group": int(fg.fixed_frame_group),
+                "layers": si.layers or 1,
+                "pattern_width": si.pattern_width or 1,
+                "pattern_height": si.pattern_height or 1,
+                "pattern_depth": si.pattern_depth or 1,
+                "phases": n_phases,
+                "sprite_ids": list(si.sprite_id),
+            })
+        if gen_gif_for_item(obj.id, fgs, force=args.force, source_mtime=outfits_mtime):
+            item_gifs += 1
+        if (i + 1) % 500 == 0:
+            print(f"  ... {i+1}/{len(item_candidates)} items ({item_gifs} gifs, {time.time()-t1:.1f}s)")
+
+    print()
+    print("=" * 60)
+    print(f"Items animados:         {len(item_candidates)}")
+    print(f"Items com GIF gerado:   {item_gifs}")
+    print(f"Tempo total (items):    {time.time()-t1:.1f}s")
+    print(f"Output:                 {GIFS_DIR}")
     return 0
 
 

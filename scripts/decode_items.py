@@ -122,10 +122,12 @@ def item_to_row(app) -> dict:
         })
 
     sprite_ids = all_sprite_ids(app)
+    # strip espacos extras no nome (CipSoft deixa vazar " vial of corrosive blood")
+    raw_name = (app.name or "").strip()
     return {
         "id": app.id,
-        "name": app.name or None,
-        "description": app.description or None,
+        "name": raw_name or None,
+        "description": (app.description or "").strip() or None,
         "slot": SLOT_NAMES.get(slot_val) if slot_val else None,
         "slot_id": slot_val,
         "market_category": CATEGORY_NAMES.get(market_cat) if market_cat else None,
@@ -175,6 +177,29 @@ def main() -> int:
     print(f"[+] Missiles: {len(appearances.missile)}")
 
     items = [item_to_row(o) for o in appearances.object]
+
+    # Filtra lixo conhecido do appearances.dat (test items e placeholders Theons)
+    import re as _re
+    _TEST_RE = _re.compile(r"\btest\b|\bTEST\b", _re.IGNORECASE)
+    _PLACEHOLDER_SPRITE = 191968
+    _NUMERIC_PREFIX_RE = _re.compile(r"^\d+\s+\w+$")
+
+    def _is_garbage(it):
+        n = it.get("name") or ""
+        # 1) test items com "test" no nome (CipSoft internal/debug)
+        if _TEST_RE.search(n):
+            return True
+        # 2) placeholders "50 Theons" e similares: nome N+palavra, sem cat, sem slot, sprite placeholder
+        if (it["main_sprite_id"] == _PLACEHOLDER_SPRITE
+            and it["market_category"] is None and it["slot"] is None
+            and _NUMERIC_PREFIX_RE.match(n)):
+            return True
+        return False
+
+    garbage = [i for i in items if _is_garbage(i)]
+    items = [i for i in items if not _is_garbage(i)]
+    print(f"[+] Filtrados {len(garbage)} items lixo (test/placeholders): "
+          f"{[i['name'] for i in garbage[:10]]}")
 
     # Stats
     named = sum(1 for i in items if i["name"])

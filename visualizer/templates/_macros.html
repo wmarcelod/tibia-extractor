@@ -42,10 +42,16 @@
   {% endif %}
 {%- endmacro -%}
 
-{%- macro item_card(it) -%}
+{%- macro item_card(it, gif_ids=None) -%}
 <div class="card">
   <a href="{{ url_for('item_detail', item_id=it['id']) }}">
-    <div class="sprite-box">{{ sprite_img(it['main_sprite_id'], it['name']) }}</div>
+    <div class="sprite-box">
+      {% if gif_ids and it['id'] in gif_ids %}
+        <img src="{{ url_for('item_gif', item_id=it['id']) }}" alt="{{ it['name'] }}" loading="lazy" class="gif">
+      {% else %}
+        {{ sprite_img(it['main_sprite_id'], it['name']) }}
+      {% endif %}
+    </div>
     <div class="title">{{ it['name'] or ('#' ~ it['id']) }}</div>
     <div class="meta">
       {% if it['market_category'] %}<span class="tag category">{{ it['market_category'] }}</span>{% endif %}

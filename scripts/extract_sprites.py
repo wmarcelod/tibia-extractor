@@ -93,7 +93,13 @@ def apply_colorkey(img: Image.Image) -> Image.Image:
 
 
 def infer_grid(w: int, h: int, count: int) -> tuple[int, int, int, int]:
-    best = None
+    """Descobre cols/rows/tw/th de uma spritesheet.
+
+    Tibia sempre usa tiles de lados multiplos de 32 (32x32, 64x32, 32x64, 64x64).
+    Alguns sheets tem `count` menor que `cols*rows` (tiles vazios no fim).
+    """
+    candidates = []
+    # Opcao 1: divisao exata (comportamento original, preferivel)
     for cols in range(1, count + 1):
         if count % cols != 0:
             continue
@@ -101,12 +107,25 @@ def infer_grid(w: int, h: int, count: int) -> tuple[int, int, int, int]:
         if w % cols != 0 or h % rows != 0:
             continue
         tw, th = w // cols, h // rows
-        score = (abs(tw - th), abs(cols - rows), -min(tw, th))
-        if best is None or score < best[1]:
-            best = ((cols, rows, tw, th), score)
-    if best is None:
+        if tw in (32, 64) and th in (32, 64):
+            candidates.append(((cols, rows, tw, th), (0, abs(tw - th), abs(cols - rows), -min(tw, th))))
+
+    # Opcao 2: permitir cols*rows > count (sheet com tiles sobrando)
+    for tw in (32, 64):
+        for th in (32, 64):
+            if w % tw or h % th:
+                continue
+            cols, rows = w // tw, h // th
+            if cols * rows < count:
+                continue
+            # penaliza se sobram MUITOS tiles (provavel grid errado)
+            waste = cols * rows - count
+            candidates.append(((cols, rows, tw, th), (1, waste, abs(tw - th), abs(cols - rows))))
+
+    if not candidates:
         raise ValueError(f"Nao infere grid {w}x{h} count={count}")
-    return best[0]
+    candidates.sort(key=lambda c: c[1])
+    return candidates[0][0]
 
 
 def process_sheet(entry: dict) -> tuple[int, list[int], str | None]:

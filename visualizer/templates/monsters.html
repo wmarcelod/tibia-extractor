@@ -16,9 +16,16 @@
     {% if rows %}
       <div class="grid">
         {% for m in rows %}
+        {% set gd = gif_dir_by_outfit.get(m['outfit_id']) %}
         <div class="card">
           <a href="{{ url_for('monster_detail', name=m['name']) }}">
-            <div class="sprite-box">{{ sprite_img(m['preview_sprite_id'], m['name']) }}</div>
+            <div class="sprite-box">
+              {% if gd is not none %}
+                <img src="{{ url_for('outfit_gif', outfit_id=m['outfit_id'], direction=gd) }}" alt="{{ m['name'] }}" loading="lazy" class="gif">
+              {% else %}
+                {{ sprite_img(m['preview_sprite_id'], m['name']) }}
+              {% endif %}
+            </div>
             <div class="title">{{ m['name'] }}</div>
             <div class="meta">
               <span class="tag">race {{ m['race'] }}</span>

@@ -43,7 +43,7 @@
 
     {% if rows %}
       <div class="grid">
-        {% for it in rows %}{{ item_card(it) }}{% endfor %}
+        {% for it in rows %}{{ item_card(it, gif_ids) }}{% endfor %}
       </div>
       {{ pager(page, 'items', {'cat': cat, 'slot': slot, 'q': q}) }}
     {% else %}

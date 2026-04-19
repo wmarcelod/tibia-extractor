@@ -80,6 +80,18 @@ def outfit_gif(outfit_id: int, direction: int):
     return send_from_directory(GIFS_DIR, fname, max_age=60 * 60 * 24)
 
 
+@app.route("/gif/item/<int:item_id>.gif")
+def item_gif(item_id: int):
+    fname = f"item_{item_id}.gif"
+    if not (GIFS_DIR / fname).exists():
+        abort(404)
+    return send_from_directory(GIFS_DIR, fname, max_age=60 * 60 * 24)
+
+
+def item_has_gif(item_id: int) -> bool:
+    return (GIFS_DIR / f"item_{item_id}.gif").exists() if GIFS_DIR.exists() else False
+
+
 # ---------- helpers ----------
 
 def paginate(total: int, page: int) -> dict:
@@ -249,9 +261,17 @@ def items():
         "SELECT COUNT(*) FROM items WHERE name IS NOT NULL AND market_category IS NULL"
     ).fetchone()
 
+    # Descobre quais items da pagina tem GIF (fast: disk check)
+    gif_ids = set()
+    if GIFS_DIR.exists():
+        for r in rows:
+            if (GIFS_DIR / f"item_{r['id']}.gif").exists():
+                gif_ids.add(r["id"])
+
     return render_template("items.html",
                            rows=rows, page=p, cats=cats, slots=slots,
-                           no_cat=no_cat, cat=cat, slot=slot, q=q)
+                           no_cat=no_cat, cat=cat, slot=slot, q=q,
+                           gif_ids=gif_ids)
 
 
 @app.route("/items/<int:item_id>")
@@ -268,7 +288,8 @@ def item_detail(item_id: int):
         "SELECT sprite_id, position FROM item_sprites WHERE item_id = ? "
         "ORDER BY position LIMIT 24", [item_id]
     ).fetchall()
-    return render_template("item.html", item=item, npcs=npcs, sprites=sprites)
+    has_gif = item_has_gif(item_id)
+    return render_template("item.html", item=item, npcs=npcs, sprites=sprites, has_gif=has_gif)
 
 
 # ---------- routes: NPCs ----------
@@ -387,7 +408,22 @@ def monsters_list():
             ).fetchall()
     except sqlite3.OperationalError:
         rows = []
-    return render_template("monsters.html", rows=rows, q=q)
+
+    # Resolve GIF por outfit_id (dir2 = front). Usa direct disk check.
+    gif_dir_by_outfit: dict[int, int | None] = {}
+    if GIFS_DIR.exists():
+        for r in rows:
+            oid = r["outfit_id"]
+            if oid is None or oid in gif_dir_by_outfit:
+                continue
+            for d in (2, 0, 1, 3):
+                if (GIFS_DIR / f"outfit_{oid}_dir{d}.gif").exists():
+                    gif_dir_by_outfit[oid] = d
+                    break
+            else:
+                gif_dir_by_outfit[oid] = None
+    return render_template("monsters.html", rows=rows, q=q,
+                           gif_dir_by_outfit=gif_dir_by_outfit)
 
 
 @app.route("/monsters/<path:name>")

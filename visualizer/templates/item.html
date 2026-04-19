@@ -44,7 +44,13 @@
 
       <div class="infobox">
         <div class="infobox-header">{{ item['name'] or 'Item' }}</div>
-        <div class="spritebig">{{ sprite_img(item['main_sprite_id'], item['name']) }}</div>
+        <div class="spritebig">
+          {% if has_gif %}
+            <img src="{{ url_for('item_gif', item_id=item['id']) }}" alt="{{ item['name'] }}" class="outfit-gif">
+          {% else %}
+            {{ sprite_img(item['main_sprite_id'], item['name']) }}
+          {% endif %}
+        </div>
         <table>
           <tr><th>ID</th><td>{{ item['id'] }}</td></tr>
           {% if item['market_category'] %}<tr><th>Categoria</th><td>{{ item['market_category'] }}</td></tr>{% endif %}

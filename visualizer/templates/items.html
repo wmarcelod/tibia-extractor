@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, item_card %}
+{% block title %}Itens - Tibia DB{% endblock %}
+
+{% block main %}
+<main>
+  <aside class="sidebar">
+    <h3>Categorias</h3>
+    <ul>
+      <li><a href="{{ url_for('items') }}" class="{% if not cat and not slot %}active{% endif %}">
+        Todas <span class="count">{{ page.total if not cat and not slot else '' }}</span>
+      </a></li>
+      {% for c in cats %}
+      <li><a href="{{ url_for('items', cat=c['market_category']) }}"
+             class="{% if cat == c['market_category'] %}active{% endif %}">
+        {{ c['market_category'] }} <span class="count">{{ c['n'] }}</span>
+      </a></li>
+      {% endfor %}
+      <li><a href="{{ url_for('items') }}?_none=1" onclick="return false;" style="pointer-events:none; opacity:0.6">
+        <em>sem categoria:</em> <span class="count">{{ no_cat }}</span>
+      </a></li>
+    </ul>
+
+    <h3>Slot</h3>
+    <ul>
+      {% for s in slots %}
+      <li><a href="{{ url_for('items', slot=s['slot']) }}"
+             class="{% if slot == s['slot'] %}active{% endif %}">
+        {{ s['slot'] }} <span class="count">{{ s['n'] }}</span>
+      </a></li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <section class="content">
+    <h2>
+      {% if cat %}Itens: {{ cat }}
+      {% elif slot %}Itens: slot {{ slot }}
+      {% elif q %}Busca: "{{ q }}"
+      {% else %}Todos os itens com nome{% endif %}
+      <small>({{ page.total }} resultados)</small>
+    </h2>
+
+    {% if rows %}
+      <div class="grid">
+        {% for it in rows %}{{ item_card(it) }}{% endfor %}
+      </div>
+      {{ pager(page, 'items', {'cat': cat, 'slot': slot, 'q': q}) }}
+    {% else %}
+      <div class="empty">Nenhum item encontrado.</div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

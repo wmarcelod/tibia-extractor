@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, sprite_img %}
+{% block title %}Outfits - Tibia DB{% endblock %}
+
+{% block main %}
+<main>
+  <aside class="sidebar">
+    <h3>Tipo</h3>
+    <ul>
+      <li><a href="{{ url_for('outfits') }}" class="{% if not kind %}active{% endif %}">
+        Todos <span class="count">{{ page.total if not kind else '' }}</span>
+      </a></li>
+      {% for k in kinds %}
+      <li><a href="{{ url_for('outfits', kind=k['kind']) }}"
+             class="{% if kind == k['kind'] %}active{% endif %}">
+        {{ k['kind'] or 'sem-tipo' }} <span class="count">{{ k['n'] }}</span>
+      </a></li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <section class="content">
+    <h2>
+      {% if kind %}Outfits: {{ kind }}{% else %}Todos os outfits{% endif %}
+      <small>({{ page.total }} resultados)</small>
+    </h2>
+
+    {% if rows %}
+      <div class="grid">
+        {% for o in rows %}
+        <div class="card">
+          <a href="{{ url_for('outfit_detail', outfit_id=o['id']) }}">
+            <div class="sprite-box">{{ sprite_img(o['preview_sprite_id'], 'outfit ' ~ o['id']) }}</div>
+            <div class="title">#{{ o['id'] }}</div>
+            <div class="meta">
+              {% if o['kind'] %}<span class="tag category">{{ o['kind'] }}</span>{% endif %}
+              <span class="tag level">{{ o['total_sprites'] }} sprites</span>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {{ pager(page, 'outfits', {'kind': kind}) }}
+    {% else %}
+      <div class="empty">Nenhum outfit encontrado.</div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

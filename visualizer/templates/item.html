@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sprite_img %}
+{% block title %}{{ item['name'] or ('Item #' ~ item['id']) }} - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>{{ item['name'] or ('Item #' ~ item['id']) }} <small>#{{ item['id'] }}</small></h2>
+
+    <div class="detail-layout">
+      <div>
+        {% if item['description'] %}
+          <div class="description">{{ item['description'] }}</div>
+        {% endif %}
+
+        {% if sprites %}
+          <h3>Sprites ({{ sprites|length }})</h3>
+          <div class="sprite-strip">
+            {% for s in sprites %}
+              <div class="sprite-mini">{{ sprite_img(s['sprite_id']) }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if npcs %}
+          <h3>NPCs</h3>
+          <table class="data">
+            <thead>
+              <tr><th>NPC</th><th>Cidade</th><th>Vende por</th><th>Compra por</th></tr>
+            </thead>
+            <tbody>
+              {% for n in npcs %}
+              <tr>
+                <td><a href="{{ n['npc_name']|npc_url }}">{{ n['npc_name'] }}</a></td>
+                <td>{{ n['location'] or '-' }}</td>
+                <td>{% if n['sale_price'] %}{{ n['sale_price'] }} gp{% else %}-{% endif %}</td>
+                <td>{% if n['buy_price'] %}{{ n['buy_price'] }} gp{% else %}-{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </div>
+
+      <div class="infobox">
+        <div class="infobox-header">{{ item['name'] or 'Item' }}</div>
+        <div class="spritebig">{{ sprite_img(item['main_sprite_id'], item['name']) }}</div>
+        <table>
+          <tr><th>ID</th><td>{{ item['id'] }}</td></tr>
+          {% if item['market_category'] %}<tr><th>Categoria</th><td>{{ item['market_category'] }}</td></tr>{% endif %}
+          {% if item['slot'] %}<tr><th>Slot</th><td>{{ item['slot'] }}</td></tr>{% endif %}
+          {% if item['minimum_level'] %}<tr><th>Nivel mininimo</th><td>{{ item['minimum_level'] }}</td></tr>{% endif %}
+          {% if item['professions'] %}<tr><th>Profissoes</th><td>{{ item['professions'] }}</td></tr>{% endif %}
+          {% if item['light_brightness'] %}<tr><th>Luz</th><td>brilho {{ item['light_brightness'] }} / cor {{ item['light_color'] }}</td></tr>{% endif %}
+          {% if item['elevation'] %}<tr><th>Elevacao</th><td>{{ item['elevation'] }}</td></tr>{% endif %}
+          <tr><th>Flags</th><td>
+            {% if item['stackable'] %}<span class="tag">empilhavel</span>{% endif %}
+            {% if item['container'] %}<span class="tag">container</span>{% endif %}
+            {% if item['usable'] %}<span class="tag">usavel</span>{% endif %}
+            {% if item['multiuse'] %}<span class="tag">multi-uso</span>{% endif %}
+            {% if item['pickupable'] %}<span class="tag">pegavel</span>{% endif %}
+            {% if item['liquid_container'] %}<span class="tag">liquido</span>{% endif %}
+            {% if item['rotatable'] %}<span class="tag">rotaciona</span>{% endif %}
+            {% if item['hangable'] %}<span class="tag">pendura</span>{% endif %}
+            {% if item['corpse'] %}<span class="tag">cadaver</span>{% endif %}
+          </td></tr>
+          <tr><th>Sprite ID</th><td>{{ item['main_sprite_id'] or '-' }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <p style="margin-top:20px"><a href="{{ url_for('items') }}">&larr; voltar</a></p>
+  </section>
+</main>
+{% endblock %}

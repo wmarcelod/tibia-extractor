@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sprite_img %}
+{% block title %}Outfit #{{ outfit['id'] }} - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>Outfit #{{ outfit['id'] }} <small>{{ outfit['kind'] or '' }}</small></h2>
+
+    <div class="detail-layout">
+      <div>
+        {% if sprites %}
+          <h3>Sprites ({{ sprites|length }})</h3>
+          <div class="sprite-strip">
+            {% for s in sprites %}
+              <div class="sprite-mini">{{ sprite_img(s['sprite_id']) }}</div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">Sem sprites extraidos.</div>
+        {% endif %}
+      </div>
+
+      <div class="infobox">
+        <div class="infobox-header">Outfit #{{ outfit['id'] }}</div>
+        <div class="spritebig">{{ sprite_img(outfit['preview_sprite_id'], 'outfit ' ~ outfit['id']) }}</div>
+        <table>
+          <tr><th>ID</th><td>{{ outfit['id'] }}</td></tr>
+          {% if outfit['kind'] %}<tr><th>Tipo</th><td>{{ outfit['kind'] }}</td></tr>{% endif %}
+          <tr><th>Layers</th><td>{{ outfit['layers'] }}</td></tr>
+          <tr><th>Pattern</th><td>{{ outfit['pattern_width'] }} x {{ outfit['pattern_height'] }} x {{ outfit['pattern_depth'] }}</td></tr>
+          <tr><th>Animado</th><td>{% if outfit['has_moving'] %}sim{% else %}nao{% endif %}</td></tr>
+          <tr><th>Total sprites</th><td>{{ outfit['total_sprites'] }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <p style="margin-top:20px"><a href="{{ url_for('outfits') }}">&larr; voltar</a></p>
+  </section>
+</main>
+{% endblock %}

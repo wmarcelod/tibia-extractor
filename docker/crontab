@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TZ=Europe/Berlin
+# Roda o pipeline todo dia as 10:30 Europe/Berlin (CEST no verao, CET no inverno)
+30 10 * * * root cd /app && python scripts/pipeline.py >> /proc/1/fd/1 2>> /proc/1/fd/2

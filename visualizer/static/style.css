@@ -1,0 +1,514 @@
+/* ---------- TibiaWiki.com.br inspired theme ----------
+   Reference look: MediaWiki Vector skin, light gray bg,
+   white content cards, red gradient infobox headers, blue links.
+*/
+
+:root {
+  --bg:            #f6f6f6;
+  --bg-content:    #ffffff;
+  --bg-soft:       #f8f9fa;
+  --bg-card:       #ffffff;
+  --fg:            #202122;
+  --fg-muted:      #54595d;
+  --border:        #a2a9b1;
+  --border-soft:   #c8ccd1;
+  --accent:        #b00002;       /* TibiaWiki red */
+  --accent-2:      #de360f;
+  --link:          #3366cc;
+  --link-hover:    #447ff5;
+  --link-visited:  #795cb2;
+  --shadow:        0 0 .3em #999;
+  --radius:        12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Helvetica Neue", "Liberation Sans", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover { color: var(--link-hover); text-decoration: underline; }
+a:visited { color: var(--link-visited); }
+
+/* ---------- Header bar ---------- */
+
+header.topbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+header.topbar h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+  letter-spacing: 0.3px;
+}
+header.topbar h1 a { color: inherit; text-decoration: none; }
+header.topbar h1 a:hover { color: var(--accent-2); }
+.search-form { margin-left: auto; }
+.search-form input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--fg);
+  border-radius: 2px;
+  width: 260px;
+  font-size: 13px;
+}
+.search-form input:focus {
+  outline: none;
+  border-color: var(--link);
+  box-shadow: 0 0 0 2px rgba(51,102,204,0.15);
+}
+
+/* ---------- Tabs ---------- */
+
+nav.tabs {
+  background: #f6f6f6;
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+}
+nav.tabs a {
+  padding: 10px 20px;
+  color: var(--fg-muted);
+  font-size: 14px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-bottom: -1px;
+  text-decoration: none;
+  position: relative;
+  top: 1px;
+}
+nav.tabs a:hover { color: var(--link); text-decoration: none; background: #ffffff; }
+nav.tabs a.active {
+  background: #ffffff;
+  border-color: var(--border);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* ---------- Layout ---------- */
+
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+}
+main.single { grid-template-columns: 1fr; }
+
+aside.sidebar {
+  background: var(--bg-content);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 10px 12px;
+  align-self: start;
+  position: sticky;
+  top: 16px;
+  box-shadow: var(--shadow);
+}
+aside.sidebar h3 {
+  margin: 0 0 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--fg);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+aside.sidebar h3:not(:first-child) { margin-top: 16px; }
+aside.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+aside.sidebar li a {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 6px;
+  color: var(--link);
+  border-radius: 2px;
+  gap: 8px;
+  font-size: 13px;
+}
+aside.sidebar li a:hover { background: #eaf3ff; text-decoration: none; }
+aside.sidebar li a.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+aside.sidebar li a .count { color: var(--fg-muted); font-size: 11px; }
+aside.sidebar li a.active .count { color: #fff; opacity: 0.9; }
+
+section.content {
+  background: var(--bg-content);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 18px 22px;
+  min-width: 0;
+  box-shadow: var(--shadow);
+}
+section.content > h2 {
+  margin: 0 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--accent);
+  color: var(--fg);
+  font-size: 22px;
+  font-family: "Linux Libertine", Georgia, serif;
+  font-weight: 400;
+}
+section.content > h2 small {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin-left: 8px;
+  font-family: inherit;
+}
+section.content h3 {
+  margin: 20px 0 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "Linux Libertine", Georgia, serif;
+}
+
+/* ---------- Item grid ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 10px 8px;
+  text-align: center;
+  transition: border-color 80ms, box-shadow 80ms;
+  overflow: hidden;
+}
+.card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(176,0,2,0.12);
+}
+.card a { color: var(--link); text-decoration: none; display: block; }
+.card a:hover { text-decoration: none; }
+.card .sprite-box {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 8px;
+  background:
+    linear-gradient(45deg, #e5e5e5 25%, transparent 25%) 0 0/14px 14px,
+    linear-gradient(-45deg, #e5e5e5 25%, transparent 25%) 0 0/14px 14px,
+    linear-gradient(45deg, transparent 75%, #e5e5e5 75%) 0 0/14px 14px,
+    linear-gradient(-45deg, transparent 75%, #e5e5e5 75%) 0 0/14px 14px,
+    #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+}
+.card .sprite-box img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.card .title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 4px;
+  line-height: 1.25;
+  color: var(--link);
+}
+.card .meta {
+  color: var(--fg-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.grid.outfit-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+.grid.outfit-grid .sprite-box {
+  width: 96px; height: 96px;
+}
+
+/* ---------- Item detail ---------- */
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+.detail-layout.no-infobox {
+  grid-template-columns: 1fr;
+}
+
+/* Infobox on the right — TibiaWiki's hallmark */
+.infobox {
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 0;
+}
+.infobox-header {
+  background: linear-gradient(120deg,
+    rgba(176,0,2,1) 0%, rgba(185,11,5,1) 25%,
+    rgba(199,27,9,1) 50%, rgba(213,43,12,1) 75%,
+    rgba(222,54,15,1) 100%);
+  color: #fff;
+  text-align: center;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+}
+.infobox .spritebig {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 280px;
+  background:
+    linear-gradient(45deg, #eaeaea 25%, transparent 25%) 0 0/20px 20px,
+    linear-gradient(-45deg, #eaeaea 25%, transparent 25%) 0 0/20px 20px,
+    linear-gradient(45deg, transparent 75%, #eaeaea 75%) 0 0/20px 20px,
+    linear-gradient(-45deg, transparent 75%, #eaeaea 75%) 0 0/20px 20px,
+    #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-soft);
+}
+.infobox .spritebig img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.infobox table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.infobox table th, .infobox table td {
+  padding: 5px 10px;
+  border-bottom: 1px dotted #ccc;
+  text-align: left;
+  vertical-align: top;
+}
+.infobox table th {
+  color: var(--fg-muted);
+  font-weight: 600;
+  width: 45%;
+  background: var(--bg-soft);
+}
+.infobox table tr:last-child th,
+.infobox table tr:last-child td { border-bottom: none; }
+
+.sprite-strip {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin: 8px 0;
+}
+.sprite-strip .sprite-mini {
+  width: 40px; height: 40px;
+  background: #f4f4f4;
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 2px;
+}
+.sprite-strip img {
+  width: 36px; height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ---------- Data tables ---------- */
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 13px;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+table.data th {
+  background: var(--bg-soft);
+  color: var(--fg);
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+table.data td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #eee;
+}
+table.data tr:nth-child(even) td { background: var(--bg-soft); }
+table.data .sprite-cell { width: 40px; padding: 2px; }
+table.data .sprite-cell img {
+  width: 32px; height: 32px; image-rendering: pixelated;
+  display: block;
+}
+
+/* ---------- Pagination + tags ---------- */
+
+.pager {
+  display: flex; gap: 4px; margin: 20px 0 0; justify-content: center;
+  flex-wrap: wrap;
+}
+.pager a, .pager span {
+  padding: 5px 10px;
+  border: 1px solid var(--border-soft);
+  background: #fff;
+  color: var(--link);
+  border-radius: 2px;
+  min-width: 32px;
+  text-align: center;
+  font-size: 13px;
+}
+.pager a:hover { background: #eaf3ff; text-decoration: none; }
+.pager .current {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.pager .disabled { color: #bbb; background: var(--bg-soft); }
+
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-right: 4px;
+  margin-bottom: 2px;
+}
+.tag.slot { background: #e1f4e4; border-color: #7cc489; color: #1f6d35; }
+.tag.level { background: #fff3d6; border-color: #e2ba5e; color: #7a5a1a; }
+.tag.profession { background: #f0e5ff; border-color: #a08bc8; color: #5a3a9a; }
+.tag.category { background: #dfeeff; border-color: #85aadd; color: #1f498c; }
+
+.description {
+  background: var(--bg-soft);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-style: italic;
+  color: var(--fg-muted);
+  border-radius: 2px;
+}
+
+.empty {
+  padding: 40px; text-align: center; color: var(--fg-muted); font-style: italic;
+}
+
+footer {
+  padding: 14px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 24px;
+  background: #fff;
+}
+
+/* ---------- NPC / search extras ---------- */
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+.inline-search {
+  display: flex; gap: 6px; margin: 10px 0 16px;
+}
+.inline-search input {
+  flex: 0 1 320px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 2px;
+  font-size: 13px;
+}
+.inline-search button {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.inline-search button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.inline-search .btn-clear {
+  align-self: center;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.npc-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  columns: 3;
+  column-gap: 20px;
+}
+.npc-list li {
+  padding: 2px 0;
+  break-inside: avoid;
+}
+
+.meta-line {
+  margin: 8px 0 14px;
+  padding: 6px 10px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--border);
+  font-size: 13px;
+}
+
+table.data td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+out/
+assets/
+_tmp_assets*/
+_tmp_*.py
+_tw_*
+.claude/
+.vscode/
+node_modules
+README.md.bak

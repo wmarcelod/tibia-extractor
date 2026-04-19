@@ -2,3 +2,4 @@ curl_cffi>=0.14
 protobuf>=6.0
 pillow>=11.0
 numpy>=2.0
+flask>=3.0

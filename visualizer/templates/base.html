@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Tibia DB Viewer{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <h1><a href="{{ url_for('home') }}">Tibia DB</a></h1>
+    <form class="search-form" action="{{ url_for('search') }}" method="get">
+      <input type="text" name="q" placeholder="Buscar item ou NPC..." value="{{ request.args.get('q','') }}">
+    </form>
+  </header>
+
+  <nav class="tabs">
+    <a href="{{ url_for('items') }}"   class="{% if active == 'items' %}active{% endif %}">Itens</a>
+    <a href="{{ url_for('npcs') }}"    class="{% if active == 'npcs' %}active{% endif %}">NPCs</a>
+    <a href="{{ url_for('outfits') }}" class="{% if active == 'outfits' %}active{% endif %}">Criaturas / Outfits</a>
+  </nav>
+
+  {% block main %}{% endblock %}
+
+  <footer>
+    Gerado a partir de <code>out/items.db</code> · tibia-extractor
+  </footer>
+</body>
+</html>

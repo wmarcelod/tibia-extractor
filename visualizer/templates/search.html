@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_macros.html" import item_card %}
+{% block title %}Busca: {{ q }} - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>Busca: "{{ q }}"</h2>
+
+    <h3>Itens ({{ items|length }})</h3>
+    {% if items %}
+      <div class="grid">
+        {% for it in items %}{{ item_card(it) }}{% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">Nenhum item.</div>
+    {% endif %}
+
+    <h3>NPCs ({{ npcs|length }})</h3>
+    {% if npcs %}
+      <ul class="npc-list">
+        {% for n in npcs %}
+          <li><a href="{{ n['npc_name']|npc_url }}">{{ n['npc_name'] }}</a></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">Nenhum NPC.</div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

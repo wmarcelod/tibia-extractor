@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sprite_img %}
+{% block title %}{{ name }} - NPC - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>{{ name }} <small>NPC</small></h2>
+
+    {% if locations %}
+      <div class="meta-line"><strong>Localizacao:</strong> {{ locations|join(', ') }}</div>
+    {% endif %}
+
+    <div class="two-col">
+      <div>
+        <h3>Vende ({{ sells|length }})</h3>
+        {% if sells %}
+        <table class="data">
+          <thead>
+            <tr><th></th><th>Item</th><th>Categoria</th><th>Preco</th></tr>
+          </thead>
+          <tbody>
+            {% for r in sells %}
+            <tr>
+              <td class="sprite-cell">{{ sprite_img(r['main_sprite_id'], r['name']) }}</td>
+              <td><a href="{{ url_for('item_detail', item_id=r['id']) }}">{{ r['name'] or ('#' ~ r['id']) }}</a></td>
+              <td>{{ r['market_category'] or '-' }}</td>
+              <td class="num">{{ r['sale_price'] }} gp</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <div class="empty">Nao vende nada.</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <h3>Compra ({{ buys|length }})</h3>
+        {% if buys %}
+        <table class="data">
+          <thead>
+            <tr><th></th><th>Item</th><th>Categoria</th><th>Preco</th></tr>
+          </thead>
+          <tbody>
+            {% for r in buys %}
+            <tr>
+              <td class="sprite-cell">{{ sprite_img(r['main_sprite_id'], r['name']) }}</td>
+              <td><a href="{{ url_for('item_detail', item_id=r['id']) }}">{{ r['name'] or ('#' ~ r['id']) }}</a></td>
+              <td>{{ r['market_category'] or '-' }}</td>
+              <td class="num">{{ r['buy_price'] }} gp</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <div class="empty">Nao compra nada.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <p style="margin-top:20px"><a href="{{ url_for('npcs') }}">&larr; voltar</a></p>
+  </section>
+</main>
+{% endblock %}

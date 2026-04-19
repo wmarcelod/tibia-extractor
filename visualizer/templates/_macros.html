@@ -1,0 +1,56 @@
+{%- macro pager(page, endpoint, args={}) -%}
+{%- if page.pages > 1 -%}
+<div class="pager">
+  {%- set prev = page.page - 1 -%}
+  {%- set nxt = page.page + 1 -%}
+  {% if prev >= 1 %}
+    <a href="{{ url_for(endpoint, **dict(args, page=prev)) }}">&lt; anterior</a>
+  {% else %}
+    <span class="disabled">&lt; anterior</span>
+  {% endif %}
+
+  {%- set start = [1, page.page - 3] | max -%}
+  {%- set fim   = [page.pages, page.page + 3] | min -%}
+  {% if start > 1 %}
+    <a href="{{ url_for(endpoint, **dict(args, page=1)) }}">1</a>
+    {% if start > 2 %}<span class="disabled">…</span>{% endif %}
+  {% endif %}
+  {% for p in range(start, fim + 1) %}
+    {% if p == page.page %}
+      <span class="current">{{ p }}</span>
+    {% else %}
+      <a href="{{ url_for(endpoint, **dict(args, page=p)) }}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if fim < page.pages %}
+    {% if fim < page.pages - 1 %}<span class="disabled">…</span>{% endif %}
+    <a href="{{ url_for(endpoint, **dict(args, page=page.pages)) }}">{{ page.pages }}</a>
+  {% endif %}
+
+  {% if nxt <= page.pages %}
+    <a href="{{ url_for(endpoint, **dict(args, page=nxt)) }}">proxima &gt;</a>
+  {% else %}
+    <span class="disabled">proxima &gt;</span>
+  {% endif %}
+</div>
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro sprite_img(sid, alt='') -%}
+  {% if sid %}
+    <img src="{{ url_for('sprite', sprite_id=sid) }}" alt="{{ alt }}" loading="lazy">
+  {% endif %}
+{%- endmacro -%}
+
+{%- macro item_card(it) -%}
+<div class="card">
+  <a href="{{ url_for('item_detail', item_id=it['id']) }}">
+    <div class="sprite-box">{{ sprite_img(it['main_sprite_id'], it['name']) }}</div>
+    <div class="title">{{ it['name'] or ('#' ~ it['id']) }}</div>
+    <div class="meta">
+      {% if it['market_category'] %}<span class="tag category">{{ it['market_category'] }}</span>{% endif %}
+      {% if it['minimum_level'] %}<span class="tag level">lv {{ it['minimum_level'] }}</span>{% endif %}
+    </div>
+  </a>
+</div>
+{%- endmacro -%}

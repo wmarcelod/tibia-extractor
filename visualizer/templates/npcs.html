@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}NPCs - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>NPCs <small>({{ rows|length }})</small></h2>
+
+    <form class="inline-search" method="get" action="{{ url_for('npcs') }}">
+      <input type="text" name="q" placeholder="Filtrar por nome..." value="{{ q }}">
+      <button type="submit">Filtrar</button>
+      {% if q %}<a href="{{ url_for('npcs') }}" class="btn-clear">limpar</a>{% endif %}
+    </form>
+
+    {% if rows %}
+    <table class="data">
+      <thead>
+        <tr><th>NPC</th><th>Itens</th><th>Vende</th><th>Compra</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><a href="{{ r['npc_name']|npc_url }}">{{ r['npc_name'] }}</a></td>
+          <td>{{ r['n_items'] }}</td>
+          <td>{{ r['n_sells'] or 0 }}</td>
+          <td>{{ r['n_buys'] or 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty">Nenhum NPC encontrado.</div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

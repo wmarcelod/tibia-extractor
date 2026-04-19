@@ -121,32 +121,57 @@ def admin_status():
     return Response("\n".join(lines), mimetype="text/plain")
 
 
+UPLOAD_TMP = Path("/tmp/tibiadb_upload.tgz")
+
+
 @app.route("/admin/upload", methods=["POST"])
 def admin_upload():
-    """Recebe um tar.gz no body e extrai em /app/out (sobrescreve).
+    """Upload chunked de um tar.gz.
 
-    Uso pra bootstrap inicial / atualizacoes quando o host bate 403
-    em static.tibia.com. Cliente:
-      tar czf out.tgz -C out . && curl --data-binary @out.tgz \\
-        "https://<host>/admin/upload?token=XXX"
+    Uso:
+      ?action=init            -> zera o arquivo temp
+      ?action=chunk (body)    -> append do body no arquivo temp
+      ?action=finalize        -> extrai o temp em /app/out (sobrescreve)
+
+    Cloudflare limita bodies a ~100MB, por isso o upload vem em chunks.
     """
     _require_admin()
-    import io, tarfile
-    data = request.get_data(cache=False)
-    if not data:
-        return Response("body vazio", status=400, mimetype="text/plain")
+    action = request.args.get("action", "")
     out_dir = ROOT / "out"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tf:
-            members = [m for m in tf.getmembers() if not m.name.startswith("/") and ".." not in m.name.split("/")]
-            tf.extractall(out_dir, members=members, filter="data")
-            n = len(members)
-    except tarfile.TarError as e:
-        return Response(f"tar error: {e}", status=400, mimetype="text/plain")
+
+    if action == "init":
+        UPLOAD_TMP.parent.mkdir(parents=True, exist_ok=True)
+        UPLOAD_TMP.write_bytes(b"")
+        return Response("init ok\n", mimetype="text/plain")
+
+    if action == "chunk":
+        data = request.get_data(cache=False)
+        if not data:
+            return Response("body vazio", status=400, mimetype="text/plain")
+        with UPLOAD_TMP.open("ab") as f:
+            f.write(data)
+        size = UPLOAD_TMP.stat().st_size
+        return Response(f"chunk ok: +{len(data)} bytes, total={size}\n", mimetype="text/plain")
+
+    if action == "finalize":
+        import tarfile
+        if not UPLOAD_TMP.exists():
+            return Response("nada pra finalizar (chame action=init primeiro)", status=400, mimetype="text/plain")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            with tarfile.open(UPLOAD_TMP, mode="r:gz") as tf:
+                members = [m for m in tf.getmembers() if not m.name.startswith("/") and ".." not in m.name.split("/")]
+                tf.extractall(out_dir, members=members, filter="data")
+                n = len(members)
+        except tarfile.TarError as e:
+            return Response(f"tar error: {e}", status=400, mimetype="text/plain")
+        total = UPLOAD_TMP.stat().st_size
+        UPLOAD_TMP.unlink(missing_ok=True)
+        return Response(f"ok: {n} membros extraidos em {out_dir}\ntamanho do tar.gz: {total}\n", mimetype="text/plain")
+
     return Response(
-        f"ok: {n} membros extraidos em {out_dir}\nbytes: {len(data)}\n",
-        mimetype="text/plain",
+        "use ?action=init | ?action=chunk (POST body) | ?action=finalize",
+        status=400, mimetype="text/plain",
     )
 
 

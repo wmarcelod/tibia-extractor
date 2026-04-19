@@ -9,11 +9,6 @@
 
     <div class="detail-layout">
       <div>
-        <h3>Dados do cliente</h3>
-        <p class="meta-line">
-          Dados extraidos de <code>staticdata.dat</code>. Caracteristicas de combate
-          (HP, experiencia, loot) vivem no servidor e nao estao no cliente.
-        </p>
         {% if m['outfit_id'] %}
           <p><a href="{{ url_for('outfit_detail', outfit_id=m['outfit_id']) }}">Ver outfit #{{ m['outfit_id'] }} completo (todas direcoes, sprites raw)</a></p>
         {% endif %}

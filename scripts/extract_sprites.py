@@ -92,14 +92,15 @@ def apply_colorkey(img: Image.Image) -> Image.Image:
     return Image.fromarray(arr)
 
 
-def infer_grid(w: int, h: int, count: int) -> tuple[int, int, int, int]:
+def infer_grid(w: int, h: int, count: int, sheet: "Image.Image | None" = None) -> tuple[int, int, int, int]:
     """Descobre cols/rows/tw/th de uma spritesheet.
 
-    Tibia sempre usa tiles de lados multiplos de 32 (32x32, 64x32, 32x64, 64x64).
-    Alguns sheets tem `count` menor que `cols*rows` (tiles vazios no fim).
+    Tibia usa tiles de lados multiplos de 32 (32x32, 64x32, 32x64, 64x64).
+    Quando o sheet e fornecido, testa cada candidato contando tiles nao-vazios
+    e prefere o que maximiza isso -- resolve ambiguidade entre 64x32 e 32x64.
     """
-    candidates = []
-    # Opcao 1: divisao exata (comportamento original, preferivel)
+    candidates = []  # (cols, rows, tw, th)
+    # 1. Divisao exata
     for cols in range(1, count + 1):
         if count % cols != 0:
             continue
@@ -108,9 +109,8 @@ def infer_grid(w: int, h: int, count: int) -> tuple[int, int, int, int]:
             continue
         tw, th = w // cols, h // rows
         if tw in (32, 64) and th in (32, 64):
-            candidates.append(((cols, rows, tw, th), (0, abs(tw - th), abs(cols - rows), -min(tw, th))))
-
-    # Opcao 2: permitir cols*rows > count (sheet com tiles sobrando)
+            candidates.append((cols, rows, tw, th))
+    # 2. cols*rows > count (sheet com tiles sobrando)
     for tw in (32, 64):
         for th in (32, 64):
             if w % tw or h % th:
@@ -118,14 +118,31 @@ def infer_grid(w: int, h: int, count: int) -> tuple[int, int, int, int]:
             cols, rows = w // tw, h // th
             if cols * rows < count:
                 continue
-            # penaliza se sobram MUITOS tiles (provavel grid errado)
-            waste = cols * rows - count
-            candidates.append(((cols, rows, tw, th), (1, waste, abs(tw - th), abs(cols - rows))))
-
+            c = (cols, rows, tw, th)
+            if c not in candidates:
+                candidates.append(c)
     if not candidates:
         raise ValueError(f"Nao infere grid {w}x{h} count={count}")
-    candidates.sort(key=lambda c: c[1])
-    return candidates[0][0]
+    if len(candidates) == 1:
+        return candidates[0]
+    # Desempate: se temos o sheet, conta tiles nao-vazios pra cada
+    if sheet is not None:
+        scored = []
+        for cols, rows, tw, th in candidates:
+            non_empty = 0
+            for i in range(count):
+                col, row = i % cols, i // cols
+                tile = sheet.crop((col*tw, row*th, (col+1)*tw, (row+1)*th))
+                if tile.split()[-1].getbbox() is not None:
+                    non_empty += 1
+            # score: mais nao-vazio e melhor; menos waste desempata
+            waste = cols * rows - count
+            scored.append(((cols, rows, tw, th), (-non_empty, waste, abs(tw - th))))
+        scored.sort(key=lambda x: x[1])
+        return scored[0][0]
+    # Sem sheet: heuristica antiga (preferir quadrado + sem waste)
+    candidates.sort(key=lambda c: (c[0]*c[1] - count, abs(c[2]-c[3]), abs(c[0]-c[1])))
+    return candidates[0]
 
 
 def process_sheet(entry: dict) -> tuple[int, list[int], str | None]:
@@ -154,8 +171,9 @@ def process_sheet(entry: dict) -> tuple[int, list[int], str | None]:
         bmp_bytes = decompress(raw, params)
         sheet = Image.open(io.BytesIO(bmp_bytes))
         w, h = sheet.size
-        cols, rows, tw, th = infer_grid(w, h, count)
+        # Aplica colorkey antes (precisa pra detectar tiles nao-vazios corretamente)
         sheet = apply_colorkey(sheet)
+        cols, rows, tw, th = infer_grid(w, h, count, sheet=sheet)
 
         written = []
         for idx in range(count):

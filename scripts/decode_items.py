@@ -113,11 +113,20 @@ def item_to_row(app) -> dict:
 
     npcs = []
     for npc in flags.npcsaledata:
+        # Preco 0 no appearances.dat = "nao faz essa operacao" (nao compra/nao vende)
+        # CipSoft preenche o campo mesmo quando NPC nao executa aquela transacao.
+        sale = npc.sale_price if npc.HasField("sale_price") else None
+        buy = npc.buy_price if npc.HasField("buy_price") else None
+        if sale == 0: sale = None
+        if buy == 0: buy = None
+        # Se NPC nao compra nem vende esse item, pula o registro inteiro
+        if sale is None and buy is None:
+            continue
         npcs.append({
             "name": npc.name or None,
             "location": npc.location or None,
-            "sale_price": npc.sale_price if npc.HasField("sale_price") else None,
-            "buy_price": npc.buy_price if npc.HasField("buy_price") else None,
+            "sale_price": sale,
+            "buy_price": buy,
             "currency_object_type_id": npc.currency_object_type_id if npc.HasField("currency_object_type_id") else None,
         })
 

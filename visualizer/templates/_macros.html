@@ -56,6 +56,7 @@
     <div class="meta">
       {% if it['market_category'] %}<span class="tag category">{{ it['market_category'] }}</span>{% endif %}
       {% if it['minimum_level'] %}<span class="tag level">lv {{ it['minimum_level'] }}</span>{% endif %}
+      {% if 'n_variants' in it.keys() and it['n_variants'] and it['n_variants'] > 1 %}<span class="tag">{{ it['n_variants'] }}x</span>{% endif %}
     </div>
   </a>
 </div>

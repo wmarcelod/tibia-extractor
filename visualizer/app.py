@@ -239,12 +239,33 @@ def items():
         params.append(f"%{q}%")
     where_sql = " AND ".join(where)
 
+    # Dedup: agrupa por (name, sprite) — ou so por name se rotatable (4 direcoes).
+    # O canonical de cada grupo e' o com metadata mais completa (market_category,
+    # slot, minimum_level NOT NULL). N_variants mostra quantos ids tem o nome.
+    group_key = ("name || '|' || CASE WHEN rotatable=1 THEN '' "
+                 "ELSE COALESCE(main_sprite_id,'') END")
     c = db().cursor()
-    (total,) = c.execute(f"SELECT COUNT(*) FROM items WHERE {where_sql}", params).fetchone()
+    (total,) = c.execute(
+        f"SELECT COUNT(*) FROM ("
+        f"  SELECT 1 FROM items WHERE {where_sql} GROUP BY {group_key}"
+        f")", params,
+    ).fetchone()
     p = paginate(total, page)
     rows = c.execute(
-        f"""SELECT id, name, market_category, slot, minimum_level, main_sprite_id
-              FROM items WHERE {where_sql}
+        f"""SELECT id, name, market_category, slot, minimum_level, main_sprite_id, n_variants
+              FROM (
+                SELECT *,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY {group_key}
+                    ORDER BY
+                      (market_category IS NULL),
+                      (slot IS NULL),
+                      (minimum_level IS NULL),
+                      id
+                  ) AS rn,
+                  COUNT(*) OVER (PARTITION BY {group_key}) AS n_variants
+                FROM items WHERE {where_sql}
+              ) WHERE rn = 1
              ORDER BY name LIMIT ? OFFSET ?""",
         params + [PAGE_SIZE, p["offset"]],
     ).fetchall()

@@ -83,7 +83,8 @@ def outfit_gif(outfit_id: int, direction: int):
 
 @app.route("/map_tile/<kind>/<filename>")
 def map_tile(kind: str, filename: str):
-    if kind not in {"minimap", "satellite_16", "satellite_32", "satellite_64", "subarea"}:
+    if kind not in {"minimap_32", "minimap_64",
+                    "satellite_16", "satellite_32", "satellite_64", "subarea"}:
         abort(404)
     d = MAP_TILES_DIR / kind
     if not (d / filename).exists():
@@ -516,37 +517,34 @@ def map_view():
 @app.route("/api/map/tiles/<int:z>")
 def api_map_tiles(z: int):
     """Retorna lista de tiles disponiveis pra um piso (z)."""
-    kind = request.args.get("kind", "satellite_32")  # default zoom medio
-    file_type = "SATELLITE" if kind.startswith("satellite") else kind.upper()
-    # scale_factor por kind: sat_16=0.0625, sat_32=0.03125, sat_64=0.015625
-    scale_map = {"satellite_16": 0.0625, "satellite_32": 0.03125, "satellite_64": 0.015625}
+    kind = request.args.get("kind", "satellite_32")
+    # Mapping de kind -> (file_type, scale_factor)
+    kind_spec = {
+        "satellite_16": ("SATELLITE", 0.0625),   # zoom out
+        "satellite_32": ("SATELLITE", 0.03125),  # zoom medio
+        "satellite_64": ("SATELLITE", 0.015625), # zoom in (mais detalhe por pixel)
+        "minimap_32":   ("MINIMAP",   0.03125),
+        "minimap_64":   ("MINIMAP",   0.015625),
+    }
+    spec = kind_spec.get(kind)
+    if not spec:
+        from flask import jsonify
+        return jsonify({"kind": kind, "z": z, "tiles": []})
+    file_type, scale = spec
     c = db().cursor()
-    if file_type == "SATELLITE":
-        scale = scale_map.get(kind)
-        rows = c.execute(
-            "SELECT file_name, top_left_x, top_left_y, fields_width, fields_height "
-            "FROM map_files WHERE file_type='SATELLITE' AND top_left_z=? AND scale_factor=?",
-            [z, scale],
-        ).fetchall()
-    else:
-        rows = c.execute(
-            "SELECT file_name, top_left_x, top_left_y, fields_width, fields_height "
-            "FROM map_files WHERE file_type=? AND top_left_z=?",
-            [file_type, z],
-        ).fetchall()
-    # converte nome do arquivo .bmp.lzma -> .png
+    rows = c.execute(
+        "SELECT file_name, top_left_x, top_left_y, fields_width, fields_height "
+        "FROM map_files WHERE file_type=? AND top_left_z=? AND scale_factor=?",
+        [file_type, z, scale],
+    ).fetchall()
     from flask import jsonify
+    import re as _re
     tiles = []
     for r in rows:
         png = r["file_name"].replace(".bmp.lzma", ".png")
-        # quebra prefix: "minimap-32-XXXX-YYYY-FF-<hash>.bmp.lzma" -> "XXXX-YYYY-FF.png"
-        import re as _re
         m = _re.match(r"(minimap|satellite)-(\d+)-(\d{4})-(\d{4})-(\d{2})-.*", r["file_name"])
         if m:
             png = f"{m.group(3)}-{m.group(4)}-{m.group(5)}.png"
-        m2 = _re.match(r"subarea-(\d+)-.*", r["file_name"])
-        if m2:
-            png = f"{m2.group(1)}.png"
         tiles.append({
             "name": png,
             "x": r["top_left_x"], "y": r["top_left_y"],

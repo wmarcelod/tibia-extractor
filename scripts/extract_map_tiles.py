@@ -45,7 +45,8 @@ OUT = ROOT / "out"
 TILES_DIR = OUT / "map_tiles"
 
 SUBDIRS = {
-    "minimap": TILES_DIR / "minimap",
+    "minimap_32": TILES_DIR / "minimap_32",
+    "minimap_64": TILES_DIR / "minimap_64",
     "satellite_16": TILES_DIR / "satellite_16",
     "satellite_32": TILES_DIR / "satellite_32",
     "satellite_64": TILES_DIR / "satellite_64",
@@ -63,12 +64,10 @@ def classify(name: str) -> tuple[str, str] | None:
     """Retorna (categoria, stem_saida) ou None se nao for tile de mapa."""
     m = RE_TILE.match(name)
     if m:
-        kind = m.group("kind")
-        zoom = m.group("zoom")
+        kind = m.group("kind")  # 'minimap' ou 'satellite'
+        zoom = m.group("zoom")  # '16', '32', '64'
         stem = f"{m.group('x')}-{m.group('y')}-{m.group('z')}"
-        if kind == "minimap":
-            return ("minimap", stem)
-        return (f"satellite_{zoom}", stem)
+        return (f"{kind}_{zoom}", stem)
     m = RE_SUBAREA.match(name)
     if m:
         return ("subarea", m.group("n"))

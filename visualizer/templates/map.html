@@ -17,10 +17,12 @@
       </label>
       <label>Camada:
         <select id="layer-select">
-          <option value="satellite_32" selected>Satélite (medio)</option>
-          <option value="satellite_16">Satélite (zoom out)</option>
-          <option value="satellite_64">Satélite (zoom in)</option>
-          <option value="minimap">Minimapa</option>
+          <option value="auto" selected>Satélite (auto-zoom)</option>
+          <option value="satellite_64">Satélite alta-res</option>
+          <option value="satellite_32">Satélite média-res</option>
+          <option value="satellite_16">Satélite baixa-res</option>
+          <option value="minimap_64">Minimapa alta-res</option>
+          <option value="minimap_32">Minimapa baixa-res</option>
         </select>
       </label>
       <label><input type="checkbox" id="show-npcs" checked> Mostrar NPCs</label>
@@ -39,50 +41,75 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function() {
-  // Tibia world coords: x≈31872..33920, y≈30976..32900
-  // Leaflet CRS.Simple: mapeamos (world_x, world_y) -> (lng=x, lat=-y) pra y "virar pra baixo"
-  const WORLD_MIN_X = 31744, WORLD_MAX_X = 34303;
-  const WORLD_MIN_Y = 30976, WORLD_MAX_Y = 33023;
-
-  // tamanho do tile (wold tiles por tile file)
-  // satellite_32 cada tile cobre 512 sqm (scale_factor=0.03125 -> 1/32)
-  // Conforme agent B: step no nome = 16 entre tiles adjacentes; numero no nome = world/32
-  // Tile filename ex: 0996-0968-00.png  (0996*32 = 31872, world-x; 0968*32 = 30976, world-y; floor 00)
-  // scale_factor 0.03125 => tile .png 512x512 cobre 16 world tiles (1 px = 1/32 sqm) — na verdade 512 world sqm
+  // Leaflet CRS.Simple: lat = -y (pra norte ficar pra cima), lng = x
+  function latLng(x, y) { return [-y, x]; }
 
   const map = L.map('map', {
     crs: L.CRS.Simple,
-    minZoom: -4, maxZoom: 3, zoom: 0,
+    minZoom: -3, maxZoom: 4, zoom: 0,
     attributionControl: false,
+    zoomSnap: 0.5, zoomDelta: 0.5,
   });
 
-  // tiles dinamicos: busca do server a lista e desenha cada um como ImageOverlay
   let currentLayers = [];
   let npcMarkers = [];
   let currentZ = 7;
-  let currentKind = 'satellite_32';
+  let currentKind = 'auto';
+  let fitOnNextLoad = true;
 
-  function latLng(x, y) { return [-y, x]; }
+  // Auto-zoom: baseia escolha da kind no zoom atual do Leaflet
+  function autoKind(prefix) {
+    const z = map.getZoom();
+    // prefix = 'satellite' ou 'minimap'
+    if (prefix === 'minimap') return z >= 1 ? 'minimap_64' : 'minimap_32';
+    if (z >= 2) return 'satellite_64';
+    if (z >= 0) return 'satellite_32';
+    return 'satellite_16';
+  }
+
+  function resolveKind() {
+    if (currentKind === 'auto') return autoKind('satellite');
+    if (currentKind === 'minimap_auto') return autoKind('minimap');
+    return currentKind;
+  }
 
   async function loadTiles() {
     currentLayers.forEach(l => map.removeLayer(l));
     currentLayers = [];
-    const resp = await fetch(`/api/map/tiles/${currentZ}?kind=${currentKind}`);
+    const kind = resolveKind();
+    const resp = await fetch(`/api/map/tiles/${currentZ}?kind=${kind}`);
     const data = await resp.json();
-    const scaleMap = {satellite_16: 8, satellite_32: 16, satellite_64: 32, minimap: 16};
-    const step = scaleMap[currentKind] || 16;
-    for (const t of data.tiles) {
-      const url = `/map_tile/${currentKind}/${t.name}`;
-      // tile cobre (t.x, t.y) até (t.x + t.w, t.y + t.h) em world coords
-      const bounds = [latLng(t.x, t.y), latLng(t.x + t.w, t.y + t.h)];
-      const img = L.imageOverlay(url, bounds);
-      img.addTo(map);
-      currentLayers.push(img);
-    }
     if (data.tiles.length === 0) {
-      console.warn('Sem tiles pro piso', currentZ, 'camada', currentKind);
+      console.warn('Sem tiles pro piso', currentZ, 'camada', kind);
+      return;
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const t of data.tiles) {
+      const url = `/map_tile/${kind}/${t.name}`;
+      const bounds = [latLng(t.x, t.y), latLng(t.x + t.w, t.y + t.h)];
+      const ov = L.imageOverlay(url, bounds, {className: 'tile-pixel'}).addTo(map);
+      currentLayers.push(ov);
+      minX = Math.min(minX, t.x);
+      minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x + t.w);
+      maxY = Math.max(maxY, t.y + t.h);
+    }
+    if (fitOnNextLoad) {
+      map.fitBounds([latLng(minX, minY), latLng(maxX, maxY)]);
+      map.setMaxBounds([latLng(minX - 500, minY - 500), latLng(maxX + 500, maxY + 500)]);
+      fitOnNextLoad = false;
     }
   }
+
+  // Quando o user zoom-in, se currentKind=auto, recarrega tiles com kind maior-res
+  let lastResolvedKind = null;
+  map.on('zoomend', () => {
+    const newKind = resolveKind();
+    if (newKind !== lastResolvedKind) {
+      lastResolvedKind = newKind;
+      loadTiles();
+    }
+  });
 
   async function loadNPCs() {
     npcMarkers.forEach(m => map.removeLayer(m));
@@ -105,18 +132,14 @@
     document.getElementById('npc-count').textContent = npcs.length + ' NPCs';
   }
 
-  // set initial view centered
-  map.fitBounds([
-    latLng(WORLD_MIN_X, WORLD_MIN_Y),
-    latLng(WORLD_MAX_X, WORLD_MAX_Y),
-  ]);
-
   document.getElementById('floor-select').addEventListener('change', e => {
     currentZ = parseInt(e.target.value);
+    fitOnNextLoad = true;
     loadTiles(); loadNPCs();
   });
   document.getElementById('layer-select').addEventListener('change', e => {
     currentKind = e.target.value;
+    fitOnNextLoad = true;
     loadTiles();
   });
   document.getElementById('show-npcs').addEventListener('change', loadNPCs);
@@ -129,6 +152,12 @@
 .map-toolbar { display: flex; gap: 16px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
 .map-toolbar label { font-size: 13px; }
 .map-toolbar select { padding: 3px 6px; }
-.leaflet-container { font-family: inherit; }
+.leaflet-container { font-family: inherit; background: #000; }
+/* Tibia tiles sao pixel-art — usa nearest-neighbor ao dar zoom */
+.tile-pixel, .leaflet-image-layer.tile-pixel {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+}
 </style>
 {% endblock %}

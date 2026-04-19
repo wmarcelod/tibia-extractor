@@ -1,0 +1,22 @@
+# Outputs gerados pelo pipeline — cada usuario roda e gera o seu
+out/
+assets/
+_tmp_assets*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

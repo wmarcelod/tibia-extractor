@@ -241,9 +241,9 @@ def main() -> int:
             w.writerow(row)
     print(f"[+] Escrito: {csv_path.relative_to(ROOT)}")
 
-    # Outfits / effects / missiles (bonus)
+    # Effects / missiles (bonus). 'outfits' e responsabilidade de decode_outfits.py
+    # (inclui kind/preview_sprite_id/pattern_*) -- nao sobrescrever aqui.
     for key, collection in [
-        ("outfits", appearances.outfit),
         ("effects", appearances.effect),
         ("missiles", appearances.missile),
     ]:

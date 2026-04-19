@@ -90,7 +90,20 @@ def main() -> int:
             light_brightness INTEGER, light_color INTEGER,
             elevation INTEGER, cyclopedia_type INTEGER,
             main_sprite_id INTEGER,
-            image_file TEXT
+            image_file TEXT,
+            -- campos ocultos decifrados dos bytes raw do appearances.dat
+            tier INTEGER,
+            vocation TEXT,
+            vocation_id INTEGER,
+            min_level_req INTEGER,
+            weapon_type TEXT,
+            weapon_type_id INTEGER,
+            is_ammunition INTEGER, is_podium INTEGER, is_writable_paper INTEGER,
+            is_fiery INTEGER, is_shimmer INTEGER, is_ring INTEGER,
+            is_decoration_kit INTEGER, is_martial_arts INTEGER,
+            gem_tier INTEGER, gem_slot INTEGER,
+            equipable_category INTEGER,
+            classification_family INTEGER
         )
     """)
     c.execute("""
@@ -177,20 +190,37 @@ def main() -> int:
         )
     """)
 
+    def _b(v):
+        return int(bool(v)) if v is not None else 0
+
     for it in items:
         c.execute(
-            """INSERT INTO items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """INSERT INTO items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                                        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 it["id"], it["name"], it["description"], it["slot"],
                 it["market_category"], it["minimum_level"], it["professions"],
-                int(bool(it["stackable"])), int(bool(it["container"])),
-                int(bool(it["usable"])), int(bool(it["multiuse"])),
-                int(bool(it["pickupable"])), int(bool(it["liquid_container"])),
-                int(bool(it["liquid_pool"])), int(bool(it["rotatable"])),
-                int(bool(it["hangable"])), int(bool(it["corpse"])),
+                _b(it["stackable"]), _b(it["container"]),
+                _b(it["usable"]), _b(it["multiuse"]),
+                _b(it["pickupable"]), _b(it["liquid_container"]),
+                _b(it["liquid_pool"]), _b(it["rotatable"]),
+                _b(it["hangable"]), _b(it["corpse"]),
                 it["light_brightness"], it["light_color"],
                 it["elevation"], it["cyclopedia_type"],
                 it["main_sprite_id"], it["image_file"],
+                # hidden fields
+                it.get("tier"),
+                it.get("vocation"), it.get("vocation_id"),
+                it.get("min_level_req"),
+                it.get("weapon_type"), it.get("weapon_type_id"),
+                _b(it.get("is_ammunition")), _b(it.get("is_podium")),
+                _b(it.get("is_writable_paper")),
+                _b(it.get("is_fiery")), _b(it.get("is_shimmer")),
+                _b(it.get("is_ring")),
+                _b(it.get("is_decoration_kit")), _b(it.get("is_martial_arts")),
+                it.get("gem_tier"), it.get("gem_slot"),
+                it.get("equipable_category"),
+                it.get("classification_family"),
             ),
         )
         for npc in it.get("npc_sources") or []:

@@ -55,10 +55,16 @@
           <tr><th>ID</th><td>{{ item['id'] }}</td></tr>
           {% if item['market_category'] %}<tr><th>Categoria</th><td>{{ item['market_category'] }}</td></tr>{% endif %}
           {% if item['slot'] %}<tr><th>Slot</th><td>{{ item['slot'] }}</td></tr>{% endif %}
-          {% if item['minimum_level'] %}<tr><th>Nivel mininimo</th><td>{{ item['minimum_level'] }}</td></tr>{% endif %}
-          {% if item['professions'] %}<tr><th>Profissoes</th><td>{{ item['professions'] }}</td></tr>{% endif %}
+          {% set lvl = item['min_level_req'] or item['minimum_level'] %}
+          {% if lvl %}<tr><th>Level mínimo</th><td>{{ lvl }}</td></tr>{% endif %}
+          {% if item['vocation'] %}<tr><th>Vocação</th><td>{{ item['vocation'] }}</td></tr>
+          {% elif item['professions'] %}<tr><th>Vocações</th><td>{{ item['professions'] }}</td></tr>{% endif %}
+          {% if item['tier'] %}<tr><th>Tier</th><td>{{ item['tier'] }}</td></tr>{% endif %}
+          {% if item['weapon_type'] %}<tr><th>Tipo de arma</th><td>{{ item['weapon_type'] }}</td></tr>{% endif %}
+          {% if item['gem_tier'] is not none %}<tr><th>Gem</th><td>tier {{ item['gem_tier'] }}{% if item['gem_slot'] is not none %}, slot {{ item['gem_slot'] }}{% endif %}</td></tr>{% endif %}
+          {% if item['classification_family'] %}<tr><th>Familia</th><td>#{{ item['classification_family'] }}</td></tr>{% endif %}
           {% if item['light_brightness'] %}<tr><th>Luz</th><td>brilho {{ item['light_brightness'] }} / cor {{ item['light_color'] }}</td></tr>{% endif %}
-          {% if item['elevation'] %}<tr><th>Elevacao</th><td>{{ item['elevation'] }}</td></tr>{% endif %}
+          {% if item['elevation'] %}<tr><th>Elevação</th><td>{{ item['elevation'] }}</td></tr>{% endif %}
           <tr><th>Flags</th><td>
             {% if item['stackable'] %}<span class="tag">empilhavel</span>{% endif %}
             {% if item['container'] %}<span class="tag">container</span>{% endif %}
@@ -69,6 +75,14 @@
             {% if item['rotatable'] %}<span class="tag">rotaciona</span>{% endif %}
             {% if item['hangable'] %}<span class="tag">pendura</span>{% endif %}
             {% if item['corpse'] %}<span class="tag">cadaver</span>{% endif %}
+            {% if item['is_ammunition'] %}<span class="tag">munição</span>{% endif %}
+            {% if item['is_podium'] %}<span class="tag">podium</span>{% endif %}
+            {% if item['is_writable_paper'] %}<span class="tag">escrevivel</span>{% endif %}
+            {% if item['is_fiery'] %}<span class="tag">fiery</span>{% endif %}
+            {% if item['is_shimmer'] %}<span class="tag">shimmer</span>{% endif %}
+            {% if item['is_ring'] %}<span class="tag">anel</span>{% endif %}
+            {% if item['is_decoration_kit'] %}<span class="tag">deco kit</span>{% endif %}
+            {% if item['is_martial_arts'] %}<span class="tag">martial arts</span>{% endif %}
           </td></tr>
           <tr><th>Sprite ID</th><td>{{ item['main_sprite_id'] or '-' }}</td></tr>
         </table>

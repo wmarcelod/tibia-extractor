@@ -97,6 +97,68 @@ def all_sprite_ids(app) -> list[int]:
     return out
 
 
+VOCATION_NAMES = {0: "all", 1: "knight", 2: "paladin", 3: "druid", 4: "sorcerer", 5: "monk"}
+WEAPON_TYPE_NAMES = {1: "sword", 2: "club", 3: "axe", 4: "distance", 5: "wand", 6: "rod", 7: "shield", 8: "ammunition"}
+
+
+def _parse_hidden_flags(flags) -> dict:
+    """Decifra os campos 45-64 de AppearanceFlags que o proto oficial nao declara.
+
+    Referencia (descoberto via varint parsing + cross-ref com in-game tooltips):
+      45 = is_ammunition, 46 = is_podium, 47 = is_writable_paper
+      48 = {1: upgrade_classification (tier 1-4)}
+      53 = is_fiery, 54 = is_shimmer, 55 = is_ring, 56 = ring_twin_id
+      57 = is_decoration_kit, 58 = {1: gem_tier, 2: gem_slot}
+      59 = is_martial_arts
+      60 = {1: equipable_category (1-3)}
+      61 = {1: classification_family_id}
+      62 = vocation mask (0=all,1=knight,2=paladin,3=druid,4=sorc,5=monk)
+      63 = minimum_level (redundante com market.minimum_level em muitos casos)
+      64 = weapon_type enum (1-8)
+    """
+    from google.protobuf.internal import decoder
+    raw = flags.SerializeToString()
+    out: dict = {}
+    pos = 0
+    while pos < len(raw):
+        tag, pos = decoder._DecodeVarint(raw, pos)
+        field_num = tag >> 3
+        wire = tag & 0x7
+        if wire == 0:
+            val, pos = decoder._DecodeVarint(raw, pos)
+        elif wire == 2:
+            ln, pos = decoder._DecodeVarint(raw, pos)
+            val = raw[pos:pos + ln]
+            pos += ln
+        elif wire == 1:
+            val = raw[pos:pos + 8]; pos += 8
+        elif wire == 5:
+            val = raw[pos:pos + 4]; pos += 4
+        else:
+            break
+        if field_num < 45:
+            continue
+        # submsg parsing (f48, f58, f60, f61)
+        if wire == 2 and field_num in (48, 58, 60, 61):
+            sub = {}
+            sp = 0
+            try:
+                while sp < len(val):
+                    st, sp = decoder._DecodeVarint(val, sp)
+                    sfn, swt = st >> 3, st & 0x7
+                    if swt == 0:
+                        sv, sp = decoder._DecodeVarint(val, sp)
+                    else:
+                        break
+                    sub[sfn] = sv
+            except Exception:
+                pass
+            out[field_num] = sub
+        else:
+            out[field_num] = val
+    return out
+
+
 def item_to_row(app) -> dict:
     """Converte Appearance (tipo 'object') numa linha achatada p/ CSV/BD."""
     flags = app.flags
@@ -105,6 +167,7 @@ def item_to_row(app) -> dict:
     light = flags.light if flags.HasField("light") else None
     height = flags.height if flags.HasField("height") else None
     cyclo = flags.cyclopediaitem if flags.HasField("cyclopediaitem") else None
+    hidden = _parse_hidden_flags(flags)
 
     slot_val = clothes.slot if clothes else None
     market_cat = market.category if market and market.HasField("category") else None
@@ -165,6 +228,25 @@ def item_to_row(app) -> dict:
         "light_color": light.color if light else None,
         "elevation": height.elevation if height else None,
         "cyclopedia_type": cyclo.cyclopedia_type if cyclo and cyclo.HasField("cyclopedia_type") else None,
+        # Campos ocultos (descobertos via varint parsing; proto oficial nao declara)
+        "tier": (hidden.get(48) or {}).get(1),  # upgrade_classification 1..4
+        "vocation_id": hidden.get(62) if isinstance(hidden.get(62), int) else None,
+        "vocation": VOCATION_NAMES.get(hidden.get(62)) if isinstance(hidden.get(62), int) else None,
+        "min_level_req": hidden.get(63) if isinstance(hidden.get(63), int) else None,
+        "weapon_type_id": hidden.get(64) if isinstance(hidden.get(64), int) else None,
+        "weapon_type": WEAPON_TYPE_NAMES.get(hidden.get(64)) if isinstance(hidden.get(64), int) else None,
+        "is_ammunition": bool(hidden.get(45)),
+        "is_podium": bool(hidden.get(46)),
+        "is_writable_paper": bool(hidden.get(47)),
+        "is_fiery": bool(hidden.get(53)),
+        "is_shimmer": bool(hidden.get(54)),
+        "is_ring": bool(hidden.get(55)),
+        "is_decoration_kit": bool(hidden.get(57)),
+        "is_martial_arts": bool(hidden.get(59)),
+        "gem_tier": (hidden.get(58) or {}).get(1),
+        "gem_slot": (hidden.get(58) or {}).get(2),
+        "equipable_category": (hidden.get(60) or {}).get(1),
+        "classification_family": (hidden.get(61) or {}).get(1),
         "npc_sources_count": len(npcs),
         "npc_sources": npcs,
         "main_sprite_id": first_sprite_id(app),

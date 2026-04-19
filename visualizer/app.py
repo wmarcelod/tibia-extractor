@@ -378,7 +378,19 @@ def outfits():
     total = len(filtered)
     p = paginate(total, page)
     rows = filtered[p["offset"]: p["offset"] + PAGE_SIZE]
-    return render_template("outfits.html", rows=rows, page=p, kinds=kinds, kind=kind)
+    # Preferimos GIF dir2 (sul, olhando pro jogador) no card
+    gif_dir_by_outfit: dict[int, int | None] = {}
+    if GIFS_DIR.exists():
+        for r in rows:
+            oid = r["id"]
+            for d in (2, 0, 1, 3):
+                if (GIFS_DIR / f"outfit_{oid}_dir{d}.gif").exists():
+                    gif_dir_by_outfit[oid] = d
+                    break
+            else:
+                gif_dir_by_outfit[oid] = None
+    return render_template("outfits.html", rows=rows, page=p, kinds=kinds, kind=kind,
+                           gif_dir_by_outfit=gif_dir_by_outfit)
 
 
 @app.route("/outfits/<int:outfit_id>")

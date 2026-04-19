@@ -28,9 +28,16 @@
     {% if rows %}
       <div class="grid">
         {% for o in rows %}
+        {% set gd = gif_dir_by_outfit.get(o['id']) %}
         <div class="card">
           <a href="{{ url_for('outfit_detail', outfit_id=o['id']) }}">
-            <div class="sprite-box">{{ sprite_img(o['preview_sprite_id'], 'outfit ' ~ o['id']) }}</div>
+            <div class="sprite-box">
+              {% if gd is not none %}
+                <img src="{{ url_for('outfit_gif', outfit_id=o['id'], direction=gd) }}" alt="outfit {{ o['id'] }}" loading="lazy" class="gif">
+              {% else %}
+                {{ sprite_img(o['preview_sprite_id'], 'outfit ' ~ o['id']) }}
+              {% endif %}
+            </div>
             <div class="title">#{{ o['id'] }}</div>
             <div class="meta">
               {% if o['kind'] %}<span class="tag category">{{ o['kind'] }}</span>{% endif %}

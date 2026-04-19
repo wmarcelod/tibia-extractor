@@ -14,11 +14,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
+import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
-from flask import Flask, abort, g, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, Response, abort, g, redirect, render_template, request, send_from_directory, url_for
+
+ADMIN_TOKEN = os.environ.get("TIBIADB_ADMIN_TOKEN", "")
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "out" / "items.db"
@@ -83,6 +87,54 @@ def inject_nav():
 @app.template_filter("npc_url")
 def npc_url_filter(name: str) -> str:
     return "/npcs/" + quote(name or "", safe="")
+
+
+# ---------- admin ----------
+
+def _require_admin():
+    if not ADMIN_TOKEN:
+        abort(404)
+    if request.args.get("token") != ADMIN_TOKEN:
+        abort(403)
+
+
+@app.route("/admin/status")
+def admin_status():
+    _require_admin()
+    out_dir = ROOT / "out"
+    sprites = SPRITES_DIR
+    files = sorted(out_dir.glob("*")) if out_dir.exists() else []
+    sprite_count = sum(1 for _ in sprites.iterdir()) if sprites.exists() else 0
+    db_size = DB_PATH.stat().st_size if DB_PATH.exists() else 0
+    lines = [
+        f"ROOT:         {ROOT}",
+        f"DB_PATH:      {DB_PATH}  exists={DB_PATH.exists()}  size={db_size}",
+        f"SPRITES_DIR:  {SPRITES_DIR}  exists={SPRITES_DIR.exists()}  count={sprite_count}",
+        f"OUT listing   ({len(files)}):",
+    ]
+    for f in files[:30]:
+        s = f.stat().st_size if f.is_file() else "-"
+        lines.append(f"  {f.name:<40}  {s}")
+    ver = ROOT / "out" / ".assets_version"
+    if ver.exists():
+        lines.append(f"assets_version: {ver.read_text().strip()[:80]}")
+    return Response("\n".join(lines), mimetype="text/plain")
+
+
+@app.route("/admin/run-pipeline")
+def admin_run_pipeline():
+    _require_admin()
+    force = request.args.get("force") == "1"
+    cmd = ["python", "scripts/pipeline.py"] + (["--force"] if force else [])
+    try:
+        proc = subprocess.run(
+            cmd, cwd=ROOT, capture_output=True, text=True, timeout=900
+        )
+    except subprocess.TimeoutExpired as e:
+        body = f"TIMEOUT apos 900s\n--- STDOUT ---\n{e.stdout or ''}\n--- STDERR ---\n{e.stderr or ''}"
+        return Response(body, mimetype="text/plain", status=504)
+    body = f"cmd: {' '.join(cmd)}\nreturncode: {proc.returncode}\n--- STDOUT ---\n{proc.stdout}\n--- STDERR ---\n{proc.stderr}"
+    return Response(body, mimetype="text/plain", status=200 if proc.returncode == 0 else 500)
 
 
 # ---------- routes: items ----------

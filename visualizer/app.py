@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "out" / "items.db"
 OUTFITS_JSON = ROOT / "out" / "outfits.json"
 SPRITES_DIR = ROOT / "out" / "sprites"
+GIFS_DIR = ROOT / "out" / "gifs"
 
 _OUTFITS_CACHE: list | None = None
 
@@ -69,6 +70,14 @@ def sprite(sprite_id: int):
     if not (SPRITES_DIR / fname).exists():
         abort(404)
     return send_from_directory(SPRITES_DIR, fname, max_age=60 * 60 * 24)
+
+
+@app.route("/gif/outfit/<int:outfit_id>/dir<int:direction>.gif")
+def outfit_gif(outfit_id: int, direction: int):
+    fname = f"outfit_{outfit_id}_dir{direction}.gif"
+    if not (GIFS_DIR / fname).exists():
+        abort(404)
+    return send_from_directory(GIFS_DIR, fname, max_age=60 * 60 * 24)
 
 
 # ---------- helpers ----------
@@ -337,7 +346,69 @@ def outfit_detail(outfit_id: int):
         abort(404)
     sprite_ids = o.get("sprite_ids") or []
     sprites = [{"sprite_id": sid, "position": i} for i, sid in enumerate(sprite_ids[:64])]
-    return render_template("outfit.html", outfit=o, sprites=sprites)
+    # Quais direcoes tem GIF gerado?
+    dirs = []
+    if GIFS_DIR.exists():
+        for d in range(max(1, o.get("pattern_width") or 1)):
+            if (GIFS_DIR / f"outfit_{outfit_id}_dir{d}.gif").exists():
+                dirs.append(d)
+    # Criaturas que usam esse outfit
+    monsters = []
+    try:
+        monsters = db().execute(
+            "SELECT race, name FROM monsters WHERE outfit_id = ? ORDER BY name",
+            [outfit_id],
+        ).fetchall()
+    except sqlite3.OperationalError:
+        pass  # DB antiga sem tabela monsters
+    return render_template("outfit.html", outfit=o, sprites=sprites,
+                           gif_dirs=dirs, monsters=monsters)
+
+
+# ---------- routes: monsters ----------
+
+@app.route("/monsters")
+def monsters_list():
+    q = (request.args.get("q") or "").strip()
+    c = db().cursor()
+    try:
+        if q:
+            rows = c.execute(
+                "SELECT m.race, m.name, m.outfit_id, o.preview_sprite_id "
+                "FROM monsters m LEFT JOIN outfits o ON o.id = m.outfit_id "
+                "WHERE m.name LIKE ? ORDER BY m.name",
+                [f"%{q}%"],
+            ).fetchall()
+        else:
+            rows = c.execute(
+                "SELECT m.race, m.name, m.outfit_id, o.preview_sprite_id "
+                "FROM monsters m LEFT JOIN outfits o ON o.id = m.outfit_id "
+                "ORDER BY m.name"
+            ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    return render_template("monsters.html", rows=rows, q=q)
+
+
+@app.route("/monsters/<path:name>")
+def monster_detail(name: str):
+    c = db().cursor()
+    try:
+        m = c.execute(
+            "SELECT m.*, o.preview_sprite_id, o.pattern_width, o.kind "
+            "FROM monsters m LEFT JOIN outfits o ON o.id = m.outfit_id "
+            "WHERE m.name = ? LIMIT 1", [name]
+        ).fetchone()
+    except sqlite3.OperationalError:
+        abort(404)
+    if not m:
+        abort(404)
+    dirs = []
+    if m["outfit_id"] and GIFS_DIR.exists():
+        for d in range(max(1, m["pattern_width"] or 1)):
+            if (GIFS_DIR / f"outfit_{m['outfit_id']}_dir{d}.gif").exists():
+                dirs.append(d)
+    return render_template("monster.html", m=m, gif_dirs=dirs)
 
 
 # ---------- search ----------
@@ -358,7 +429,18 @@ def search():
         "ORDER BY npc_name LIMIT 50",
         [f"%{q}%"],
     ).fetchall()
-    return render_template("search.html", q=q, items=items_r, npcs=npcs_r)
+    monsters_r = []
+    try:
+        monsters_r = c.execute(
+            "SELECT m.race, m.name, o.preview_sprite_id "
+            "FROM monsters m LEFT JOIN outfits o ON o.id = m.outfit_id "
+            "WHERE m.name LIKE ? ORDER BY m.name LIMIT 50",
+            [f"%{q}%"],
+        ).fetchall()
+    except sqlite3.OperationalError:
+        pass
+    return render_template("search.html", q=q, items=items_r, npcs=npcs_r,
+                           monsters=monsters_r)
 
 
 # ---------- entry ----------

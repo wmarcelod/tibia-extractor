@@ -111,6 +111,42 @@ def main() -> int:
             FOREIGN KEY (item_id) REFERENCES items(id)
         )
     """)
+    c.execute("""
+        CREATE TABLE outfits (
+            id INTEGER PRIMARY KEY,
+            kind TEXT,
+            preview_sprite_id INTEGER,
+            frame_group_count INTEGER,
+            layers INTEGER,
+            pattern_width INTEGER,
+            pattern_height INTEGER,
+            pattern_depth INTEGER,
+            has_moving INTEGER,
+            total_sprites INTEGER
+        )
+    """)
+    c.execute("""
+        CREATE TABLE monsters (
+            race INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            outfit_id INTEGER,
+            head_color INTEGER,
+            torso_color INTEGER,
+            legs_color INTEGER,
+            detail_color INTEGER,
+            addons INTEGER,
+            object_appearance_type_id INTEGER,
+            FOREIGN KEY (outfit_id) REFERENCES outfits(id)
+        )
+    """)
+    c.execute("""
+        CREATE TABLE achievements (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            grade INTEGER
+        )
+    """)
 
     for it in items:
         c.execute(
@@ -140,11 +176,56 @@ def main() -> int:
                 (it["id"], sid, pos),
             )
 
+    # Outfits / monsters / achievements (opcionais — so popula se o JSON existir)
+    outfits_json = OUT / "outfits.json"
+    if outfits_json.exists():
+        outfits = json.loads(outfits_json.read_text(encoding="utf-8"))
+        for o in outfits:
+            c.execute(
+                "INSERT INTO outfits VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    o["id"], o.get("kind"), o.get("preview_sprite_id"),
+                    o.get("frame_group_count"), o.get("layers"),
+                    o.get("pattern_width"), o.get("pattern_height"),
+                    o.get("pattern_depth"),
+                    int(bool(o.get("has_moving"))),
+                    o.get("total_sprites"),
+                ),
+            )
+        print(f"[+] Outfits na DB: {len(outfits)}")
+
+    monsters_json = OUT / "monsters.json"
+    if monsters_json.exists():
+        monsters = json.loads(monsters_json.read_text(encoding="utf-8"))
+        for m in monsters:
+            c.execute(
+                "INSERT OR REPLACE INTO monsters VALUES (?,?,?,?,?,?,?,?,?)",
+                (
+                    m.get("race"), m.get("name"), m.get("outfit_id"),
+                    m.get("head_color"), m.get("torso_color"),
+                    m.get("legs_color"), m.get("detail_color"),
+                    m.get("addons"), m.get("object_appearance_type_id"),
+                ),
+            )
+        print(f"[+] Monsters na DB: {len(monsters)}")
+
+    ach_json = OUT / "achievements.json"
+    if ach_json.exists():
+        achs = json.loads(ach_json.read_text(encoding="utf-8"))
+        for a in achs:
+            c.execute(
+                "INSERT OR REPLACE INTO achievements VALUES (?,?,?,?)",
+                (a.get("id"), a.get("name"), a.get("description"), a.get("grade")),
+            )
+        print(f"[+] Achievements na DB: {len(achs)}")
+
     c.execute("CREATE INDEX idx_items_name ON items(name)")
     c.execute("CREATE INDEX idx_items_cat ON items(market_category)")
     c.execute("CREATE INDEX idx_npc_item ON npc_sales(item_id)")
     c.execute("CREATE INDEX idx_npc_name ON npc_sales(npc_name)")
     c.execute("CREATE INDEX idx_sprites_item ON item_sprites(item_id)")
+    c.execute("CREATE INDEX idx_monsters_name ON monsters(name)")
+    c.execute("CREATE INDEX idx_monsters_outfit ON monsters(outfit_id)")
     conn.commit()
 
     # Estatisticas rapidas

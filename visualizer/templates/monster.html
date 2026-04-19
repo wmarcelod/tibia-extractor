@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sprite_img %}
+{% block title %}{{ m['name'] }} - Criatura - Tibia DB{% endblock %}
+
+{% block main %}
+<main class="single">
+  <section class="content">
+    <h2>{{ m['name'] }} <small>criatura (race {{ m['race'] }})</small></h2>
+
+    <div class="detail-layout">
+      <div>
+        <h3>Dados do cliente</h3>
+        <p class="meta-line">
+          Dados extraidos de <code>staticdata.dat</code>. Caracteristicas de combate
+          (HP, experiencia, loot) vivem no servidor e nao estao no cliente.
+        </p>
+        {% if m['outfit_id'] %}
+          <p><a href="{{ url_for('outfit_detail', outfit_id=m['outfit_id']) }}">Ver outfit #{{ m['outfit_id'] }} completo (todas direcoes, sprites raw)</a></p>
+        {% endif %}
+      </div>
+
+      <div class="infobox">
+        <div class="infobox-header">{{ m['name'] }}</div>
+        {% if gif_dirs %}
+          <div class="spritebig gif-viewer" data-outfit-id="{{ m['outfit_id'] }}" data-dirs="{{ gif_dirs|tojson }}">
+            <button class="dir-btn prev" type="button" aria-label="anterior">&larr;</button>
+            <img class="outfit-gif" src="{{ url_for('outfit_gif', outfit_id=m['outfit_id'], direction=(2 if 2 in gif_dirs else gif_dirs[0])) }}" data-idx="{{ gif_dirs.index(2) if 2 in gif_dirs else 0 }}" alt="{{ m['name'] }}">
+            <button class="dir-btn next" type="button" aria-label="proxima">&rarr;</button>
+          </div>
+        {% elif m['preview_sprite_id'] %}
+          <div class="spritebig">{{ sprite_img(m['preview_sprite_id'], m['name']) }}</div>
+        {% endif %}
+        <table>
+          <tr><th>Race</th><td>{{ m['race'] }}</td></tr>
+          {% if m['outfit_id'] %}<tr><th>Outfit ID</th><td>{{ m['outfit_id'] }}</td></tr>{% endif %}
+          {% if m['kind'] %}<tr><th>Tipo</th><td>{{ m['kind'] }}</td></tr>{% endif %}
+          {% if m['head_color'] is not none %}<tr><th>Cores</th><td>head={{ m['head_color'] }} torso={{ m['torso_color'] }} legs={{ m['legs_color'] }} detail={{ m['detail_color'] }}</td></tr>{% endif %}
+          {% if m['addons'] %}<tr><th>Addons</th><td>{{ m['addons'] }}</td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+
+    <p style="margin-top:20px"><a href="{{ url_for('monsters_list') }}">&larr; voltar</a></p>
+  </section>
+</main>
+
+<script>
+document.querySelectorAll('.gif-viewer').forEach(function(v) {
+  var dirs = JSON.parse(v.dataset.dirs);
+  if (!dirs || dirs.length <= 1) { v.querySelectorAll('.dir-btn').forEach(function(b){b.style.display='none';}); return; }
+  var id = v.dataset.outfitId;
+  var img = v.querySelector('.outfit-gif');
+  function go(delta) {
+    var idx = parseInt(img.dataset.idx) || 0;
+    idx = (idx + delta + dirs.length) % dirs.length;
+    img.dataset.idx = idx;
+    img.src = '/gif/outfit/' + id + '/dir' + dirs[idx] + '.gif?t=' + Date.now();
+  }
+  v.querySelector('.prev').addEventListener('click', function(){ go(-1); });
+  v.querySelector('.next').addEventListener('click', function(){ go(+1); });
+});
+</script>
+{% endblock %}

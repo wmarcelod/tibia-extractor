@@ -23,7 +23,23 @@
 
       <div class="infobox">
         <div class="infobox-header">Outfit #{{ outfit['id'] }}</div>
-        <div class="spritebig">{{ sprite_img(outfit['preview_sprite_id'], 'outfit ' ~ outfit['id']) }}</div>
+        {% if gif_dirs %}
+          <div class="spritebig gif-viewer" data-outfit-id="{{ outfit['id'] }}" data-dirs="{{ gif_dirs|tojson }}">
+            <button class="dir-btn prev" type="button" aria-label="anterior">&larr;</button>
+            <img class="outfit-gif" src="{{ url_for('outfit_gif', outfit_id=outfit['id'], direction=(2 if 2 in gif_dirs else gif_dirs[0])) }}" data-idx="{{ gif_dirs.index(2) if 2 in gif_dirs else 0 }}" alt="outfit {{ outfit['id'] }}">
+            <button class="dir-btn next" type="button" aria-label="proxima">&rarr;</button>
+          </div>
+        {% else %}
+          <div class="spritebig">{{ sprite_img(outfit['preview_sprite_id'], 'outfit ' ~ outfit['id']) }}</div>
+        {% endif %}
+        {% if monsters %}
+          <div class="monster-chips">
+            <strong>Criaturas:</strong>
+            {% for mm in monsters %}
+              <a href="{{ url_for('monster_detail', name=mm['name']) }}" class="tag">{{ mm['name'] }}</a>
+            {% endfor %}
+          </div>
+        {% endif %}
         <table>
           <tr><th>ID</th><td>{{ outfit['id'] }}</td></tr>
           {% if outfit['kind'] %}<tr><th>Tipo</th><td>{{ outfit['kind'] }}</td></tr>{% endif %}
@@ -38,4 +54,21 @@
     <p style="margin-top:20px"><a href="{{ url_for('outfits') }}">&larr; voltar</a></p>
   </section>
 </main>
+
+<script>
+document.querySelectorAll('.gif-viewer').forEach(function(v) {
+  var dirs = JSON.parse(v.dataset.dirs);
+  if (!dirs || dirs.length <= 1) { v.querySelectorAll('.dir-btn').forEach(function(b){b.style.display='none';}); return; }
+  var id = v.dataset.outfitId;
+  var img = v.querySelector('.outfit-gif');
+  function go(delta) {
+    var idx = parseInt(img.dataset.idx) || 0;
+    idx = (idx + delta + dirs.length) % dirs.length;
+    img.dataset.idx = idx;
+    img.src = '/gif/outfit/' + id + '/dir' + dirs[idx] + '.gif?t=' + Date.now();
+  }
+  v.querySelector('.prev').addEventListener('click', function(){ go(-1); });
+  v.querySelector('.next').addEventListener('click', function(){ go(+1); });
+});
+</script>
 {% endblock %}

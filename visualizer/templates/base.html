@@ -15,9 +15,10 @@
   </header>
 
   <nav class="tabs">
-    <a href="{{ url_for('items') }}"   class="{% if active == 'items' %}active{% endif %}">Itens</a>
-    <a href="{{ url_for('npcs') }}"    class="{% if active == 'npcs' %}active{% endif %}">NPCs</a>
-    <a href="{{ url_for('outfits') }}" class="{% if active == 'outfits' %}active{% endif %}">Criaturas / Outfits</a>
+    <a href="{{ url_for('items') }}"    class="{% if active == 'items' %}active{% endif %}">Itens</a>
+    <a href="{{ url_for('npcs') }}"     class="{% if active == 'npcs' %}active{% endif %}">NPCs</a>
+    <a href="{{ url_for('monsters_list') }}" class="{% if active == 'monsters' %}active{% endif %}">Criaturas</a>
+    <a href="{{ url_for('outfits') }}"  class="{% if active == 'outfits' %}active{% endif %}">Outfits</a>
   </nav>
 
   {% block main %}{% endblock %}

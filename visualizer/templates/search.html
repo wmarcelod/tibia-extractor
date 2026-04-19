@@ -26,6 +26,22 @@
     {% else %}
       <div class="empty">Nenhum NPC.</div>
     {% endif %}
+
+    <h3>Criaturas ({{ monsters|length }})</h3>
+    {% if monsters %}
+      <div class="grid">
+        {% for m in monsters %}
+        <div class="card">
+          <a href="{{ url_for('monster_detail', name=m['name']) }}">
+            <div class="sprite-box">{% if m['preview_sprite_id'] %}<img src="{{ url_for('sprite', sprite_id=m['preview_sprite_id']) }}" alt="{{ m['name'] }}" loading="lazy">{% endif %}</div>
+            <div class="title">{{ m['name'] }}</div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">Nenhuma criatura.</div>
+    {% endif %}
   </section>
 </main>
 {% endblock %}

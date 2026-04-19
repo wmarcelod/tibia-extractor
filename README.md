@@ -103,6 +103,46 @@ $env:TIBIA_ASSETS_DIR="C:\path\to\assets"; python scripts\decode_items.py
 
 ---
 
+## Automação via GitHub Actions
+
+O workflow `.github/workflows/daily-pipeline.yml` roda o pipeline no runner do
+GitHub (cujo IP passa pelo Cloudflare do `static.tibia.com`), empacota `out/`
+em tar.gz, quebra em pedaços de 50 MB e faz upload chunked para o viewer
+(`/admin/upload`). Isso cobre o caso em que a VPS do viewer bate 403 ao tentar
+baixar os assets direto.
+
+### Secrets necessários
+
+Configure no repositório (`Settings -> Secrets and variables -> Actions`) ou via
+`gh`:
+
+```bash
+# obrigatório — token do endpoint /admin/upload do viewer
+gh secret set TIBIADB_ADMIN_TOKEN -b "<token>"
+
+# opcional — host do viewer (default: tibiadb.marcelod.com.br)
+gh secret set TIBIADB_HOST -b "tibiadb.marcelod.com.br"
+```
+
+### Quando roda
+
+- **Agendado**: todo dia por volta de **10:30 em Europe/Berlin**. Como o GitHub
+  Actions só aceita cron em UTC, o workflow tem dois schedules — `30 8 * * *`
+  (cobre CEST/verão, UTC+2) e `30 9 * * *` (cobre CET/inverno, UTC+1). Um dos
+  dois vai disparar no horário certo dependendo do DST; o outro dispara 1h
+  antes/depois. Como o pipeline dá early-exit quando a versão local == remota,
+  o disparo redundante custa ~1s.
+- **Manual**: a qualquer momento via `workflow_dispatch`.
+
+### Como disparar manualmente
+
+```bash
+gh workflow run daily-pipeline.yml
+gh run watch
+```
+
+---
+
 ## Como funciona cada etapa
 
 ### 1. `download_tibia.py` — baixa os assets

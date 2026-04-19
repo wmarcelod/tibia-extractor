@@ -1,0 +1,118 @@
+name: daily-pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions roda em UTC e não tem TZ nativa.
+    # Alvo: 10:30 em Europe/Berlin todos os dias.
+    # CEST (verão, UTC+2) => 08:30 UTC
+    - cron: "30 8 * * *"
+    # CET (inverno, UTC+1) => 09:30 UTC
+    - cron: "30 9 * * *"
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TIBIADB_ADMIN_TOKEN: ${{ secrets.TIBIADB_ADMIN_TOKEN }}
+      TIBIADB_HOST: ${{ secrets.TIBIADB_HOST }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pipeline
+        run: |
+          python scripts/pipeline.py
+
+      - name: Verify outputs
+        run: |
+          if [ ! -f out/items.db ]; then
+            echo "ERROR: out/items.db not found after pipeline run"
+            exit 1
+          fi
+
+      - name: Package out/ as tar.gz
+        run: |
+          tar czf /tmp/out.tgz -C out .
+          ls -lh /tmp/out.tgz
+
+      - name: Split tarball into 50MB chunks
+        run: |
+          mkdir -p /tmp/chunks
+          split -b 50M /tmp/out.tgz /tmp/chunks/chunk-
+          ls -lh /tmp/chunks/
+
+      - name: Upload to viewer (init + chunks + finalize)
+        env:
+          TOKEN: ${{ secrets.TIBIADB_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo "ERROR: TIBIADB_ADMIN_TOKEN secret is not set"
+            exit 1
+          fi
+          HOST="${TIBIADB_HOST:-tibiadb.marcelod.com.br}"
+          BASE="https://${HOST}/admin/upload"
+
+          check_http() {
+            local step="$1"
+            local code="$2"
+            if [ "$code" != "200" ]; then
+              echo "ERROR: $step returned HTTP $code"
+              exit 1
+            fi
+            echo "OK: $step -> HTTP $code"
+          }
+
+          echo "==> init"
+          CODE=$(curl --fail-with-body -sS -X POST \
+            "${BASE}?token=${TOKEN}&action=init" \
+            -o /dev/null -w '%{http_code}')
+          check_http "init" "$CODE"
+
+          echo "==> uploading chunks"
+          i=0
+          for f in /tmp/chunks/chunk-*; do
+            i=$((i+1))
+            echo "  chunk $i: $f ($(wc -c < "$f") bytes)"
+            CODE=$(curl --fail-with-body -sS -X POST \
+              "${BASE}?token=${TOKEN}&action=chunk" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@${f}" \
+              -o /dev/null -w '%{http_code}')
+            check_http "chunk $i" "$CODE"
+          done
+
+          echo "==> finalize"
+          CODE=$(curl --fail-with-body -sS -X POST \
+            "${BASE}?token=${TOKEN}&action=finalize" \
+            -o /dev/null -w '%{http_code}')
+          check_http "finalize" "$CODE"
+
+      - name: Summary
+        run: |
+          echo "===== Pipeline summary ====="
+          if [ -f out/.assets_version ]; then
+            echo "assets_version: $(cat out/.assets_version)"
+          else
+            echo "assets_version: (missing)"
+          fi
+          if [ -f /tmp/out.tgz ]; then
+            echo "tarball size: $(wc -c < /tmp/out.tgz) bytes ($(du -h /tmp/out.tgz | cut -f1))"
+          fi
+          if [ -d out/sprites ]; then
+            echo "sprites count: $(find out/sprites -name '*.png' | wc -l)"
+          else
+            echo "sprites count: (out/sprites missing)"
+          fi

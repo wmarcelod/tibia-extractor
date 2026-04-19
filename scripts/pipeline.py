@@ -129,15 +129,23 @@ def main() -> int:
             env=env)
 
         run([sys.executable, "decode_outfits.py"],
-            "3/4 Decodificando outfits (criaturas/NPCs/player outfits)",
+            "3/6 Decodificando outfits (criaturas/NPCs/player outfits)",
+            env=env)
+
+        run([sys.executable, "decode_staticdata.py"],
+            "4/6 Decodificando staticdata (monsters + achievements)",
             env=env)
 
         run([sys.executable, "extract_sprites.py"],
-            "4a/4 Extraindo sprites PNG individuais",
+            "5a/6 Extraindo sprites PNG individuais",
+            env=env)
+
+        run([sys.executable, "gen_gifs.py"],
+            "5b/6 Gerando GIFs animados por direcao",
             env=env)
 
         run([sys.executable, "build_final.py"],
-            "4b/4 Gerando SQLite + CSV final (items + npcs + imagens)",
+            "6/6 Gerando SQLite + CSV final (items + npcs + monsters + imagens)",
             env=env)
 
         VERSION_FILE.write_text(remote, encoding="utf-8")

@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import lzma
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,11 +30,19 @@ BASES = {
 PKG_FILE = {"launcher": "package.json", "client": "package.json", "assets": "assets.json"}
 
 
+def _proxies() -> dict | None:
+    url = (os.environ.get("WEBSHARE_PROXY")
+           or os.environ.get("HTTPS_PROXY")
+           or os.environ.get("HTTP_PROXY"))
+    return {"http": url, "https": url} if url else None
+
+
 def fetch(url: str, binary: bool = False, retries: int = 3) -> bytes | str:
+    proxies = _proxies()
     last_exc: Exception | None = None
     for attempt in range(retries):
         try:
-            r = requests.get(url, impersonate="chrome", timeout=60)
+            r = requests.get(url, impersonate="chrome", timeout=60, proxies=proxies)
             r.raise_for_status()
             return r.content if binary else r.text
         except Exception as e:

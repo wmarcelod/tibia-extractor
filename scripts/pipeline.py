@@ -41,6 +41,20 @@ ASSETS_BASE = "https://static.tibia.com/launcher/assets-current/"
 VERSION_URL = ASSETS_BASE + "assets.json.sha256"
 
 
+def proxies_from_env() -> dict | None:
+    """Retorna dict de proxies se WEBSHARE_PROXY (ou HTTPS_PROXY) estiver setado.
+
+    Formato aceito: http://user:pass@host:port  (residencial Webshare passa
+    pelo Cloudflare que bloqueia IPs datacenter de tibia.com).
+    """
+    url = (os.environ.get("WEBSHARE_PROXY")
+           or os.environ.get("HTTPS_PROXY")
+           or os.environ.get("HTTP_PROXY"))
+    if not url:
+        return None
+    return {"http": url, "https": url}
+
+
 def run(cmd: list[str], label: str, env: dict | None = None) -> None:
     print(f"\n{'='*70}\n  {label}\n  $ {' '.join(cmd)}\n{'='*70}")
     t0 = time.time()
@@ -52,7 +66,10 @@ def run(cmd: list[str], label: str, env: dict | None = None) -> None:
 
 
 def fetch_remote_version() -> str:
-    r = requests.get(VERSION_URL, impersonate="chrome", timeout=30)
+    proxies = proxies_from_env()
+    if proxies:
+        print(f"[>] Usando proxy: {list(proxies.values())[0].split('@')[-1]}")
+    r = requests.get(VERSION_URL, impersonate="chrome", timeout=30, proxies=proxies)
     r.raise_for_status()
     return r.text.strip()
 
@@ -154,11 +171,15 @@ def main() -> int:
 
         # Datasets externos comunidade (canary GPL-2.0). Nao depende dos assets,
         # mas roda dentro do pipeline pra ficar tudo sincronizado.
+        # GitHub raw nao bate Cloudflare, nao precisa do proxy, mas passa env
+        # igual por consistencia.
         run([sys.executable, "fetch_canary_items.py"],
-            "7b/8 Baixando items.xml do canary (stats por item)")
+            "7b/8 Baixando items.xml do canary (stats por item)",
+            env=env)
 
         run([sys.executable, "fetch_creature_spawns.py"],
-            "7c/8 Baixando otservbr-monster.xml do canary (spawns)")
+            "7c/8 Baixando otservbr-monster.xml do canary (spawns)",
+            env=env)
 
         run([sys.executable, "build_final.py"],
             "8/8 Gerando SQLite final (items+npcs+monsters+map+canary+spawns)",

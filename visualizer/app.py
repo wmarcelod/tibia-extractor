@@ -208,11 +208,29 @@ def admin_upload():
     )
 
 
+_PIPELINE_LOG = Path("/tmp/tibiadb_pipeline.log")
+
+
 @app.route("/admin/run-pipeline")
 def admin_run_pipeline():
+    """Dispara o pipeline. Se &async=1 retorna imediatamente e grava em
+    /tmp/tibiadb_pipeline.log. Default: roda sync com timeout 900s.
+    Use /admin/run-pipeline-log pra ler o log.
+    """
     _require_admin()
     force = request.args.get("force") == "1"
+    is_async = request.args.get("async") == "1"
     cmd = ["python", "scripts/pipeline.py"] + (["--force"] if force else [])
+    if is_async:
+        # dispara background, retorna logo (evita Cloudflare 524)
+        _PIPELINE_LOG.write_text("=== iniciando pipeline ===\n", encoding="utf-8")
+        with _PIPELINE_LOG.open("ab") as fout:
+            subprocess.Popen(cmd, cwd=ROOT, stdout=fout, stderr=subprocess.STDOUT)
+        return Response(
+            f"pipeline disparado (async). cmd: {' '.join(cmd)}\n"
+            f"Acompanhe em /admin/run-pipeline-log?token=...\n",
+            mimetype="text/plain",
+        )
     try:
         proc = subprocess.run(
             cmd, cwd=ROOT, capture_output=True, text=True, timeout=900
@@ -222,6 +240,15 @@ def admin_run_pipeline():
         return Response(body, mimetype="text/plain", status=504)
     body = f"cmd: {' '.join(cmd)}\nreturncode: {proc.returncode}\n--- STDOUT ---\n{proc.stdout}\n--- STDERR ---\n{proc.stderr}"
     return Response(body, mimetype="text/plain", status=200 if proc.returncode == 0 else 500)
+
+
+@app.route("/admin/run-pipeline-log")
+def admin_pipeline_log():
+    _require_admin()
+    if not _PIPELINE_LOG.exists():
+        return Response("sem log ainda\n", mimetype="text/plain")
+    return Response(_PIPELINE_LOG.read_text(encoding="utf-8", errors="replace"),
+                    mimetype="text/plain")
 
 
 # ---------- routes: items ----------

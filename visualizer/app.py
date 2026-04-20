@@ -322,7 +322,14 @@ def item_detail(item_id: int):
         "ORDER BY position LIMIT 24", [item_id]
     ).fetchall()
     has_gif = item_has_gif(item_id)
-    return render_template("item.html", item=item, npcs=npcs, sprites=sprites, has_gif=has_gif)
+    # Stats vindos do canary items.xml (GPL-2.0)
+    canary = None
+    try:
+        canary = c.execute("SELECT * FROM canary_items WHERE id = ?", [item_id]).fetchone()
+    except sqlite3.OperationalError:
+        pass
+    return render_template("item.html", item=item, npcs=npcs, sprites=sprites,
+                           has_gif=has_gif, canary=canary)
 
 
 # ---------- routes: NPCs ----------
@@ -568,6 +575,44 @@ def api_map_npcs():
         rows = c.execute(
             "SELECT npc_name, x, y, z, area_name FROM npc_locations ORDER BY npc_name"
         ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/map/spawns")
+def api_map_spawns():
+    """Spawns de criaturas. Filtros: ?z=N&creature=Acid+Blob"""
+    from flask import jsonify
+    z = request.args.get("z", type=int)
+    creature = (request.args.get("creature") or "").strip()
+    c = db().cursor()
+    where = []
+    params: list = []
+    if z is not None:
+        where.append("z = ?"); params.append(z)
+    if creature:
+        where.append("creature = ? COLLATE NOCASE"); params.append(creature)
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    try:
+        rows = c.execute(
+            f"SELECT creature, x, y, z, spawntime FROM creature_spawns{where_sql} LIMIT 5000",
+            params,
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/map/creatures")
+def api_map_creatures():
+    """Lista criaturas distintas com totais. Pra autocomplete."""
+    from flask import jsonify
+    c = db().cursor()
+    try:
+        rows = c.execute(
+            "SELECT creature, COUNT(*) n FROM creature_spawns GROUP BY creature ORDER BY n DESC"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
     return jsonify([dict(r) for r in rows])
 
 

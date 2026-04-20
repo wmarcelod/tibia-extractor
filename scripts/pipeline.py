@@ -152,8 +152,16 @@ def main() -> int:
             "7/8 Gerando GIFs animados por direcao",
             env=env)
 
+        # Datasets externos comunidade (canary GPL-2.0). Nao depende dos assets,
+        # mas roda dentro do pipeline pra ficar tudo sincronizado.
+        run([sys.executable, "fetch_canary_items.py"],
+            "7b/8 Baixando items.xml do canary (stats por item)")
+
+        run([sys.executable, "fetch_creature_spawns.py"],
+            "7c/8 Baixando otservbr-monster.xml do canary (spawns)")
+
         run([sys.executable, "build_final.py"],
-            "8/8 Gerando SQLite final (items+npcs+monsters+map+imagens)",
+            "8/8 Gerando SQLite final (items+npcs+monsters+map+canary+spawns)",
             env=env)
 
         VERSION_FILE.write_text(remote, encoding="utf-8")

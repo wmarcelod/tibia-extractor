@@ -189,6 +189,36 @@ def main() -> int:
             scale_factor REAL
         )
     """)
+    c.execute("""
+        CREATE TABLE creature_spawns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            creature TEXT NOT NULL,
+            x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL,
+            spawntime INTEGER,
+            center_x INTEGER, center_y INTEGER, radius INTEGER
+        )
+    """)
+    c.execute("""
+        CREATE TABLE canary_items (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            armor INTEGER, attack INTEGER, defense INTEGER, defensemod INTEGER,
+            weight INTEGER,
+            weapontype TEXT, primarytype TEXT,
+            imbuementslot INTEGER,
+            magiclevelpoints INTEGER,
+            charges INTEGER, duration INTEGER,
+            attribute_skilldist INTEGER, attribute_skillsword INTEGER,
+            attribute_skillaxe INTEGER, attribute_skillclub INTEGER,
+            attribute_skillshield INTEGER, attribute_skillfish INTEGER,
+            attribute_skillfist INTEGER,
+            absorb_physical INTEGER, absorb_fire INTEGER, absorb_earth INTEGER,
+            absorb_ice INTEGER, absorb_energy INTEGER, absorb_holy INTEGER,
+            absorb_death INTEGER, absorb_drown INTEGER,
+            range INTEGER, hitchance INTEGER,
+            extra_attrs TEXT  -- JSON com tudo que sobrou
+        )
+    """)
 
     def _b(v):
         return int(bool(v)) if v is not None else 0
@@ -315,6 +345,67 @@ def main() -> int:
             )
         print(f"[+] Map files na DB: {len(mfs)}")
 
+    # Creature spawns from canary (otservbr-monster.xml)
+    spawns_json = OUT / "creature_spawns.json"
+    if spawns_json.exists():
+        spawns = json.loads(spawns_json.read_text(encoding="utf-8"))
+        for s in spawns:
+            c.execute(
+                "INSERT INTO creature_spawns (creature, x, y, z, spawntime, center_x, center_y, radius) VALUES (?,?,?,?,?,?,?,?)",
+                (s.get("creature"), s.get("x"), s.get("y"), s.get("z"),
+                 s.get("spawntime"), s.get("center_x"), s.get("center_y"), s.get("radius")),
+            )
+        print(f"[+] Creature spawns na DB: {len(spawns)}")
+
+    # Canary items.xml — stats numericos por item
+    canary_json = OUT / "canary_items.json"
+    if canary_json.exists():
+        ci = json.loads(canary_json.read_text(encoding="utf-8"))
+        # campos com nome diferente: absorbpercentice -> absorb_ice
+        STD_ABSORB = ["physical", "fire", "earth", "ice", "energy", "holy", "death", "drown"]
+        STD_SKILL = ["skilldist", "skillsword", "skillaxe", "skillclub", "skillshield", "skillfish", "skillfist"]
+        for it in ci:
+            standard_keys = {
+                "id", "name", "article", "plural",
+                "armor", "attack", "defense", "defensemod",
+                "weight", "weapontype", "primarytype",
+                "imbuementslot", "magiclevelpoints",
+                "charges", "duration",
+                "range", "hitchance",
+            } | {f"absorbpercent{e}" for e in STD_ABSORB} | set(STD_SKILL)
+            extra = {k: v for k, v in it.items() if k not in standard_keys}
+            def _i(v):
+                try: return int(v) if v is not None else None
+                except (ValueError, TypeError): return None
+            c.execute(
+                "INSERT OR REPLACE INTO canary_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    it.get("id"), it.get("name"),
+                    _i(it.get("armor")), _i(it.get("attack")),
+                    _i(it.get("defense")), _i(it.get("defensemod")),
+                    _i(it.get("weight")),
+                    it.get("weapontype"), it.get("primarytype"),
+                    _i(it.get("imbuementslot")),
+                    _i(it.get("magiclevelpoints")),
+                    _i(it.get("charges")), _i(it.get("duration")),
+                    _i(it.get("skilldist")), _i(it.get("skillsword")),
+                    _i(it.get("skillaxe")), _i(it.get("skillclub")),
+                    _i(it.get("skillshield")), _i(it.get("skillfish")),
+                    _i(it.get("skillfist")),
+                    _i(it.get("absorbpercentphysical")),
+                    _i(it.get("absorbpercentfire")),
+                    _i(it.get("absorbpercentearth")),
+                    _i(it.get("absorbpercentice")),
+                    _i(it.get("absorbpercentenergy")),
+                    _i(it.get("absorbpercentholy")),
+                    _i(it.get("absorbpercentdeath")),
+                    _i(it.get("absorbpercentdrown")),
+                    _i(it.get("range")), _i(it.get("hitchance")),
+                    json.dumps(extra) if extra else None,
+                ),
+            )
+        print(f"[+] Canary items na DB: {len(ci)}")
+
     c.execute("CREATE INDEX idx_items_name ON items(name)")
     c.execute("CREATE INDEX idx_items_cat ON items(market_category)")
     c.execute("CREATE INDEX idx_npc_item ON npc_sales(item_id)")
@@ -328,6 +419,9 @@ def main() -> int:
     c.execute("CREATE INDEX idx_map_files_area ON map_files(area_id)")
     c.execute("CREATE INDEX idx_map_files_type ON map_files(file_type)")
     c.execute("CREATE INDEX idx_map_files_xyz ON map_files(top_left_x, top_left_y, top_left_z)")
+    c.execute("CREATE INDEX idx_spawns_creature ON creature_spawns(creature COLLATE NOCASE)")
+    c.execute("CREATE INDEX idx_spawns_xyz ON creature_spawns(z, x, y)")
+    c.execute("CREATE INDEX idx_canary_name ON canary_items(name COLLATE NOCASE)")
     conn.commit()
 
     # Estatisticas rapidas

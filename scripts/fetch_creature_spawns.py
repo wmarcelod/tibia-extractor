@@ -28,11 +28,11 @@ def main() -> int:
     raw_path = OUT / "otservbr-monster.xml"
 
     print(f"[+] Baixando {URL}")
-    import os
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _proxy_helper import proxies_from_env
     from curl_cffi import requests
-    proxy_url = os.environ.get("WEBSHARE_PROXY") or os.environ.get("HTTPS_PROXY")
-    proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
-    r = requests.get(URL, impersonate="chrome", timeout=120, proxies=proxies)
+    r = requests.get(URL, impersonate="chrome", timeout=120, proxies=proxies_from_env())
     r.raise_for_status()
     raw_path.write_text(r.text, encoding="utf-8")
     print(f"[+] Salvo: {raw_path.relative_to(ROOT)} ({len(r.text)/1024/1024:.1f} MB)")

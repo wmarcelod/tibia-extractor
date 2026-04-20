@@ -30,11 +30,9 @@ BASES = {
 PKG_FILE = {"launcher": "package.json", "client": "package.json", "assets": "assets.json"}
 
 
-def _proxies() -> dict | None:
-    url = (os.environ.get("WEBSHARE_PROXY")
-           or os.environ.get("HTTPS_PROXY")
-           or os.environ.get("HTTP_PROXY"))
-    return {"http": url, "https": url} if url else None
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _proxy_helper import proxies_from_env as _proxies  # noqa: E402
 
 
 def fetch(url: str, binary: bool = False, retries: int = 3) -> bytes | str:

@@ -41,18 +41,7 @@ ASSETS_BASE = "https://static.tibia.com/launcher/assets-current/"
 VERSION_URL = ASSETS_BASE + "assets.json.sha256"
 
 
-def proxies_from_env() -> dict | None:
-    """Retorna dict de proxies se WEBSHARE_PROXY (ou HTTPS_PROXY) estiver setado.
-
-    Formato aceito: http://user:pass@host:port  (residencial Webshare passa
-    pelo Cloudflare que bloqueia IPs datacenter de tibia.com).
-    """
-    url = (os.environ.get("WEBSHARE_PROXY")
-           or os.environ.get("HTTPS_PROXY")
-           or os.environ.get("HTTP_PROXY"))
-    if not url:
-        return None
-    return {"http": url, "https": url}
+from _proxy_helper import proxies_from_env
 
 
 def run(cmd: list[str], label: str, env: dict | None = None) -> None:

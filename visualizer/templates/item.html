@@ -13,35 +13,6 @@
           <div class="description">{{ item['description'] }}</div>
         {% endif %}
 
-        {% if canary %}
-          <h3>Stats <small>(canary items.xml, GPL-2.0)</small></h3>
-          <table class="data">
-            {% if canary['armor'] %}<tr><td>Armor</td><td>{{ canary['armor'] }}</td></tr>{% endif %}
-            {% if canary['attack'] %}<tr><td>Attack</td><td>{{ canary['attack'] }}</td></tr>{% endif %}
-            {% if canary['defense'] %}<tr><td>Defense</td><td>{{ canary['defense'] }}{% if canary['defensemod'] %} {{ '+' if canary['defensemod'] > 0 else '' }}{{ canary['defensemod'] }}{% endif %}</td></tr>{% endif %}
-            {% if canary['weight'] %}<tr><td>Weight</td><td>{{ '%.2f'|format(canary['weight']/100) }} oz</td></tr>{% endif %}
-            {% if canary['weapontype'] %}<tr><td>Weapon Type</td><td>{{ canary['weapontype'] }}</td></tr>{% endif %}
-            {% if canary['imbuementslot'] %}<tr><td>Imbuement Slots</td><td>{{ canary['imbuementslot'] }}</td></tr>{% endif %}
-            {% if canary['magiclevelpoints'] %}<tr><td>Magic Level</td><td>+{{ canary['magiclevelpoints'] }}</td></tr>{% endif %}
-            {% if canary['range'] %}<tr><td>Range</td><td>{{ canary['range'] }}</td></tr>{% endif %}
-            {% if canary['hitchance'] %}<tr><td>Hit Chance</td><td>{{ canary['hitchance'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skilldist'] %}<tr><td>Distance Fighting</td><td>+{{ canary['attribute_skilldist'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skillsword'] %}<tr><td>Sword Fighting</td><td>+{{ canary['attribute_skillsword'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skillaxe'] %}<tr><td>Axe Fighting</td><td>+{{ canary['attribute_skillaxe'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skillclub'] %}<tr><td>Club Fighting</td><td>+{{ canary['attribute_skillclub'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skillshield'] %}<tr><td>Shielding</td><td>+{{ canary['attribute_skillshield'] }}</td></tr>{% endif %}
-            {% if canary['attribute_skillfist'] %}<tr><td>Fist Fighting</td><td>+{{ canary['attribute_skillfist'] }}</td></tr>{% endif %}
-            {% if canary['absorb_physical'] %}<tr><td>Protection Physical</td><td>{{ '+' if canary['absorb_physical'] > 0 else '' }}{{ canary['absorb_physical'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_fire'] %}<tr><td>Protection Fire</td><td>{{ '+' if canary['absorb_fire'] > 0 else '' }}{{ canary['absorb_fire'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_ice'] %}<tr><td>Protection Ice</td><td>{{ '+' if canary['absorb_ice'] > 0 else '' }}{{ canary['absorb_ice'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_energy'] %}<tr><td>Protection Energy</td><td>{{ '+' if canary['absorb_energy'] > 0 else '' }}{{ canary['absorb_energy'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_earth'] %}<tr><td>Protection Earth</td><td>{{ '+' if canary['absorb_earth'] > 0 else '' }}{{ canary['absorb_earth'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_holy'] %}<tr><td>Protection Holy</td><td>{{ '+' if canary['absorb_holy'] > 0 else '' }}{{ canary['absorb_holy'] }}%</td></tr>{% endif %}
-            {% if canary['absorb_death'] %}<tr><td>Protection Death</td><td>{{ '+' if canary['absorb_death'] > 0 else '' }}{{ canary['absorb_death'] }}%</td></tr>{% endif %}
-            {% if canary['charges'] %}<tr><td>Charges</td><td>{{ canary['charges'] }}</td></tr>{% endif %}
-            {% if canary['duration'] %}<tr><td>Duração</td><td>{{ canary['duration'] }}s</td></tr>{% endif %}
-          </table>
-        {% endif %}
 
         {% if sprites %}
           <h3>Sprites ({{ sprites|length }})</h3>

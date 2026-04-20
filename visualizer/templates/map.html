@@ -27,12 +27,6 @@
       </label>
       <label><input type="checkbox" id="show-npcs" checked> NPCs</label>
       <span id="npc-count" class="tag">0 NPCs</span>
-      <label>Criatura:
-        <input type="text" id="creature-input" list="creature-list" placeholder="Ex: Dragon, Demon..." style="width:160px">
-        <datalist id="creature-list"></datalist>
-        <button id="creature-clear" type="button">×</button>
-      </label>
-      <span id="creature-count" class="tag" style="display:none">0 spawns</span>
     </div>
 
     <div id="map" style="width:100%; height:700px; background:#111; border:1px solid var(--border-soft); border-radius:4px;"></div>
@@ -138,60 +132,10 @@
     document.getElementById('npc-count').textContent = npcs.length + ' NPCs';
   }
 
-  // ---- Spawns de criaturas (canary otservbr-monster.xml, MIT) ----
-  let spawnMarkers = [];
-  let currentCreature = '';
-
-  async function loadCreatureList() {
-    const r = await fetch('/api/map/creatures');
-    const d = await r.json();
-    const dl = document.getElementById('creature-list');
-    dl.innerHTML = '';
-    for (const c of d) {
-      const opt = document.createElement('option');
-      opt.value = c.creature;
-      opt.label = `${c.creature} (${c.n})`;
-      dl.appendChild(opt);
-    }
-  }
-
-  async function loadSpawns() {
-    spawnMarkers.forEach(m => map.removeLayer(m));
-    spawnMarkers = [];
-    const cnt = document.getElementById('creature-count');
-    if (!currentCreature) { cnt.style.display = 'none'; return; }
-    const r = await fetch(`/api/map/spawns?creature=${encodeURIComponent(currentCreature)}`);
-    const ss = await r.json();
-    // filtra pelo piso atual
-    const here = ss.filter(s => s.z === currentZ);
-    for (const s of here) {
-      const m = L.circleMarker(latLng(s.x, s.y), {
-        radius: 5, color: '#ffaa00', weight: 1, fillColor: '#ffd700', fillOpacity: 0.9,
-      });
-      m.bindTooltip(`<b>${s.creature}</b><br>(${s.x},${s.y},${s.z})${s.spawntime?` · ${s.spawntime}s`:''}`, {sticky: true});
-      m.addTo(map);
-      spawnMarkers.push(m);
-    }
-    cnt.style.display = '';
-    cnt.textContent = `${here.length}/${ss.length} spawns (piso ${currentZ})`;
-    // se nao ha no piso atual, sugere o primeiro piso disponivel
-    if (here.length === 0 && ss.length > 0) {
-      const otherZ = ss[0].z;
-      cnt.textContent += ` — tem em z=${otherZ}`;
-      // fly to first spawn em outro z
-      const fz = ss[0];
-      map.setView(latLng(fz.x, fz.y), 1);
-      document.getElementById('floor-select').value = otherZ;
-      currentZ = otherZ;
-      fitOnNextLoad = false;
-      loadTiles(); loadNPCs(); loadSpawns();
-    }
-  }
-
   document.getElementById('floor-select').addEventListener('change', e => {
     currentZ = parseInt(e.target.value);
     fitOnNextLoad = true;
-    loadTiles(); loadNPCs(); loadSpawns();
+    loadTiles(); loadNPCs();
   });
   document.getElementById('layer-select').addEventListener('change', e => {
     currentKind = e.target.value;
@@ -200,24 +144,7 @@
   });
   document.getElementById('show-npcs').addEventListener('change', loadNPCs);
 
-  document.getElementById('creature-input').addEventListener('change', e => {
-    currentCreature = e.target.value.trim();
-    loadSpawns();
-  });
-  document.getElementById('creature-clear').addEventListener('click', () => {
-    document.getElementById('creature-input').value = '';
-    currentCreature = '';
-    loadSpawns();
-  });
-
-  // deep-link ?creature=Dragon
-  const urlParams = new URLSearchParams(location.search);
-  if (urlParams.get('creature')) {
-    currentCreature = urlParams.get('creature');
-    document.getElementById('creature-input').value = currentCreature;
-  }
-
-  loadTiles(); loadNPCs(); loadCreatureList(); loadSpawns();
+  loadTiles(); loadNPCs();
 })();
 </script>
 

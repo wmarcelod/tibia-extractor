@@ -158,20 +158,8 @@ def main() -> int:
             "7/8 Gerando GIFs animados por direcao",
             env=env)
 
-        # Datasets externos comunidade (canary GPL-2.0). Nao depende dos assets,
-        # mas roda dentro do pipeline pra ficar tudo sincronizado.
-        # GitHub raw nao bate Cloudflare, nao precisa do proxy, mas passa env
-        # igual por consistencia.
-        run([sys.executable, "fetch_canary_items.py"],
-            "7b/8 Baixando items.xml do canary (stats por item)",
-            env=env)
-
-        run([sys.executable, "fetch_creature_spawns.py"],
-            "7c/8 Baixando otservbr-monster.xml do canary (spawns)",
-            env=env)
-
         run([sys.executable, "build_final.py"],
-            "8/8 Gerando SQLite final (items+npcs+monsters+map+canary+spawns)",
+            "7/7 Gerando SQLite final (items+npcs+monsters+outfits+map)",
             env=env)
 
         VERSION_FILE.write_text(remote, encoding="utf-8")
